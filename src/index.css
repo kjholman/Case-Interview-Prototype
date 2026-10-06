@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Accent channels are set from CONFIG.accent in main.tsx; these are fallbacks. */
+:root {
+  --accent: var(--accent-light, 79 70 229);
+  --accent-strong: var(--accent-strong-light, 67 56 202);
+  --accent-soft: var(--accent-soft-light, 238 242 255);
+  color-scheme: light;
+}
+:root.dark {
+  --accent: var(--accent-dark, 129 140 248);
+  --accent-strong: var(--accent-strong-dark, 165 180 252);
+  --accent-soft: var(--accent-soft-dark, 30 27 75);
+  color-scheme: dark;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100; font-feature-settings: 'tnum' 1; }
+  h1, h2, h3 { @apply font-semibold tracking-tight; }
+  :focus-visible { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-white dark:ring-offset-slate-950; }
+}
+
+@layer components {
+  .card { @apply min-w-0 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900; }
+  .btn { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-accent text-white hover:bg-accent-strong dark:text-slate-950; }
+  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800; }
+  .btn-ghost { @apply btn text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800; }
+  .btn-danger { @apply btn border border-red-300 bg-white text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950; }
+  .btn-sm { @apply px-2 py-1 text-xs; }
+  .input { @apply block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100; }
+  .label { @apply mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400; }
+  .muted { @apply text-slate-500 dark:text-slate-400; }
+  .section-title { @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400; }
+  .kbd { @apply rounded border border-slate-300 bg-slate-100 px-1 font-mono text-[11px] dark:border-slate-700 dark:bg-slate-800; }
+}
+
+/* Thin scrollbars inside data-dense panes. */
+.scroll-thin { scrollbar-width: thin; }
