@@ -88,7 +88,7 @@ move-in, a past-due repair, a unit that's ready early, unassigned steps, a CRM/P
 a unit with no plan, a tour no-show, a renewal not yet offered, an unreminded balance and escalated
 conversations.
 
-All names, companies and phone numbers (555-01xx) are fictional.
+All residents, staff, properties, operators and phone numbers (555-01xx) are fictional.
 
 ## Project layout
 
@@ -125,7 +125,13 @@ plus small primitives in `ui.tsx` (`PageHeader`, `Card`, `Switch`, `Segmented`, 
 
 ## Design notes
 
-- One accent color (indigo by default; change it in `config.ts`). Status colors differ in lightness
+- **EliseAI branding**: purple accent `#7638FA` (light periwinkle `#AFC1F6` in highlights), a near-black
+  sidebar and sign-in panel, the Inter typeface (bundled, so it works offline), an "EliseAI" text wordmark,
+  and the AI named "Elise" in conversations. All of it is set in `config.ts` (`brand`, `accent`) and
+  `src/shell/BrandMark.tsx`. There is no official logo file: drop one into `src/assets/` and render it in
+  `BrandMark` if you have it. A "concept prototype — not an official EliseAI product" note shows on the
+  sign-in page and in the sidebar.
+- Status colors differ in lightness
   as well as hue, so they read in grayscale.
 - Light and dark themes (follows the system; toggle in the top bar or Settings).
 - Responsive down to 360 px: the sidebar becomes a menu, tables scroll inside their card, the kanban

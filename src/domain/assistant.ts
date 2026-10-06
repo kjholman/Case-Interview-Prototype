@@ -3,7 +3,7 @@
  * when the data changes (fix a date mismatch → the hold disappears; unblock a task → the ETA changes).
  * Pure function; templated text, no model calls.
  */
-import type { IntegrationId } from '../config';
+import { CONFIG, type IntegrationId } from '../config';
 import { addDays, dueLabel, formatDate, formatWeekday, relativeDay } from './dates';
 import { formatCurrency } from './impact';
 import type { AutomationLevel, Conversation, Dataset, ISODate, Task, Unit } from './types';
@@ -32,16 +32,16 @@ const SENSITIVE = new Set(['renewal', 'payment', 'complaint', 'move_in', 'applic
 
 export function assistantMode(level: AutomationLevel, conv: Conversation, draft: AssistantDraft): AssistantMode {
   if (conv.escalated || draft.holds.length) {
-    return { autoSend: false, label: 'Held for staff', tone: 'warning', description: 'The assistant will not send this on its own. A staff member should review and reply.' };
+    return { autoSend: false, label: 'Held for staff', tone: 'warning', description: `${CONFIG.brand.assistantName} will not send this on its own. A staff member should review and reply.` };
   }
   if (conv.handledBy === 'staff') {
-    return { autoSend: false, label: 'Staff is handling', tone: 'neutral', description: 'A staff member took over this conversation. The assistant only drafts.' };
+    return { autoSend: false, label: 'Staff is handling', tone: 'neutral', description: `A staff member took over this conversation. ${CONFIG.brand.assistantName} only drafts.` };
   }
-  if (level === 1) return { autoSend: false, label: 'Draft · staff sends', tone: 'neutral', description: 'Level 1: the assistant drafts; a person sends.' };
+  if (level === 1) return { autoSend: false, label: 'Draft · staff sends', tone: 'neutral', description: `Level 1: ${CONFIG.brand.assistantName} drafts; a person sends.` };
   if (level === 2 && SENSITIVE.has(conv.topic)) {
     return { autoSend: false, label: 'Draft · staff sends', tone: 'neutral', description: `Level 2: ${conv.topic.replace('_', '-')} conversations are not routine, so a person sends.` };
   }
-  return { autoSend: true, label: 'Sends automatically', tone: 'success', description: `Level ${level}: the assistant sends this reply without waiting.` };
+  return { autoSend: true, label: 'Sends automatically', tone: 'success', description: `Level ${level}: ${CONFIG.brand.assistantName} sends this reply without waiting.` };
 }
 
 const first = (name: string) => name.split(' ')[0];

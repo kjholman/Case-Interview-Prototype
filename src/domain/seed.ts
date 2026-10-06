@@ -404,7 +404,7 @@ interface ConvCtx {
 
 function buildConversations(rng: Rng, today: ISODate, ctx: ConvCtx): Conversation[] {
   const out: Conversation[] = [];
-  const AI = 'Assistant';
+  const AI = CONFIG.brand.assistantName;
   let n = 0;
   const unitOf = (id?: string) => ctx.units.find((u) => u.id === id);
   const first = (name: string) => name.split(' ')[0];

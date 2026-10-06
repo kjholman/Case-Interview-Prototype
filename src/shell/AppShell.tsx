@@ -4,6 +4,7 @@ import { CONFIG, type ScreenId } from '../config';
 import { AutomationLevelControl } from '../components/AutomationLevelControl';
 import { Icon } from '../components/Icon';
 import { Modal, cx, useToast } from '../components/ui';
+import { BrandMark } from './BrandMark';
 import { SCREENS, enabledScreens } from '../screens/registry';
 import { useAlerts, useScopedData, useStore } from '../store/AppStore';
 import { useTheme, type ThemePref } from './theme';
@@ -20,7 +21,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Sidebar — fixed on desktop, slide-over on small screens */}
       <div className={cx('fixed inset-0 z-40 bg-slate-950/40 lg:hidden', navOpen ? 'block' : 'hidden')} onClick={() => setNavOpen(false)} aria-hidden />
-      <aside className={cx('fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900 lg:z-30 lg:w-60 lg:translate-x-0',
+      {/* The sidebar is always dark (EliseAI black); the `dark` class makes every dark: style apply inside it. */}
+      <aside className={cx('dark fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/5 bg-[#0B0A12] text-slate-300 transition-transform lg:z-30 lg:w-60 lg:translate-x-0',
         navOpen ? 'translate-x-0' : '-translate-x-full')} aria-label="Main navigation">
         <Brand onClose={() => setNavOpen(false)} />
         <LeftNav />
@@ -38,11 +40,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Brand({ onClose }: { onClose: () => void }) {
   const { state } = useStore();
   return (
-    <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-4 dark:border-slate-800">
-      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-white dark:text-slate-950"><Icon name="building" className="h-4 w-4" /></div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{state.settings.productName}</p>
-        <p className="truncate text-[11px] muted">{CONFIG.organizationName}</p>
+    <div className="relative flex items-start gap-2.5 overflow-hidden border-b border-white/10 px-4 pb-3.5 pt-4">
+      <div aria-hidden className="pointer-events-none absolute -left-10 -top-16 h-32 w-40 rounded-full bg-accent/40 blur-3xl" />
+      <div className="relative min-w-0 flex-1">
+        <BrandMark />
+        <p className="mt-2 truncate text-sm font-semibold text-white">{state.settings.productName}</p>
+        <p className="truncate text-[11px] text-slate-400">{CONFIG.organizationName}</p>
       </div>
       <button type="button" className="btn-ghost p-1 lg:hidden" onClick={onClose} aria-label="Close menu"><Icon name="x" className="h-5 w-5" /></button>
     </div>
@@ -70,13 +73,13 @@ function LeftNav() {
           return (
             <li key={id}>
               <NavLink to={SCREENS[id].path}
-                className={({ isActive }) => cx('flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium',
-                  isActive ? 'bg-accent-soft text-accent-strong' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>
+                className={({ isActive }) => cx('relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium',
+                  isActive ? 'bg-white/10 text-white before:absolute before:inset-y-1.5 before:-left-2 before:w-1 before:rounded-r before:bg-accent' : 'text-slate-400 hover:bg-white/5 hover:text-white')}>
                 <Icon name={SCREENS[id].icon} className="h-4 w-4 shrink-0" />
                 <span className="flex-1 truncate">{CONFIG.screens[id].label}</span>
                 {b && b.count > 0 && (
                   <span className={cx('rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
-                    b.tone === 'danger' ? 'bg-red-600 text-white' : b.tone === 'accent' ? 'bg-accent text-white dark:text-slate-950' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200')}>
+                    b.tone === 'danger' ? 'bg-red-600 text-white' : b.tone === 'accent' ? 'bg-[#7638FA] text-white' : 'bg-white/15 text-slate-200')}>
                     {b.count}
                   </span>
                 )}
@@ -93,12 +96,13 @@ function SidebarFooter() {
   const { state, dispatch } = useStore();
   const toast = useToast();
   return (
-    <div className="space-y-2 border-t border-slate-200 p-3 dark:border-slate-800">
+    <div className="space-y-2 border-t border-white/10 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Automation</span>
+        <span className="text-xs font-medium text-slate-400">Automation</span>
         <AutomationLevelControl compact value={state.settings.automationLevel}
           onChange={(level) => { dispatch({ type: 'setLevel', level }); toast(`Automation set to Level ${level}`, { tone: 'info' }); }} />
       </div>
+      <p className="text-[10px] leading-snug text-slate-500">{CONFIG.brand.disclaimer}</p>
     </div>
   );
 }
@@ -160,7 +164,7 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white dark:bg-slate-200 dark:text-slate-900">{initials}</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white dark:text-slate-950">{initials}</span>
         <span className="hidden text-left md:block">
           <span className="block text-sm font-medium leading-4 text-slate-900 dark:text-white">{user?.name}</span>
           <span className="block text-[11px] leading-4 muted">{user?.role}</span>

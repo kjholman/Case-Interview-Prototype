@@ -10,17 +10,18 @@
  *  Alerts without a fix always need a person → Exceptions inbox.
  * ─────────────────────────────────────────────────────────────────────────────
  */
+import { CONFIG } from '../config';
 import type { Alert, AutomationLevel, CollectionName, Dataset, Fix } from './types';
 
 export type Route = 'auto' | 'approval' | 'exception';
 
 export const AUTOMATION_LEVELS: { level: AutomationLevel; name: string; summary: string; detail: string }[] = [
   { level: 1, name: 'Suggest, person approves', summary: 'Nothing changes without a person.',
-    detail: 'The system suggests fixes. Every change waits in the Approval queue. The assistant drafts replies; staff send them.' },
+    detail: `The system suggests fixes. Every change waits in the Approval queue. ${CONFIG.brand.assistantName} drafts replies; staff send them.` },
   { level: 2, name: 'Automatic for low-risk items', summary: 'Routine fixes run on their own.',
-    detail: 'Low-risk fixes (syncing dates, assigning unowned work, routine reminders) apply automatically and are logged. Anything high-risk still waits for approval. The assistant sends routine replies.' },
+    detail: `Low-risk fixes (syncing dates, assigning unowned work, routine reminders) apply automatically and are logged. Anything high-risk still waits for approval. ${CONFIG.brand.assistantName} sends routine replies.` },
   { level: 3, name: 'Automatic, exceptions only', summary: 'People only see exceptions.',
-    detail: 'All fixes apply automatically except high-risk changes on urgent items, which go to the Exceptions inbox. The Approval queue stays empty. The assistant replies unless a conversation is escalated.' },
+    detail: `All fixes apply automatically except high-risk changes on urgent items, which go to the Exceptions inbox. The Approval queue stays empty. ${CONFIG.brand.assistantName} replies unless a conversation is escalated.` },
 ];
 
 export function routeAlert(alert: Alert, level: AutomationLevel): Route {

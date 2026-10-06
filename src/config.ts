@@ -27,7 +27,15 @@ export interface ScreenConfig {
 }
 
 export const CONFIG = {
-  /** Neutral, configurable product name (can also be changed at runtime in Settings). */
+  /** Brand shown in the shell (text wordmark — see src/shell/BrandMark.tsx). */
+  brand: {
+    name: 'EliseAI',
+    /** Name the AI uses in conversations and previews. */
+    assistantName: 'Elise',
+    /** Shown on the sign-in page and in the sidebar so nobody mistakes the demo for a real product login. */
+    disclaimer: 'Concept prototype for an interview demo — not an official EliseAI product. All data is fictional.',
+  },
+  /** Product (module) name under the brand (can also be changed at runtime in Settings). */
   productName: 'Operations Console',
   /** Fictional operator that owns the portfolio. */
   organizationName: 'Northgate Residential',
@@ -42,16 +50,15 @@ export const CONFIG = {
 
   /**
    * Single accent color as space-separated RGB channels (for Tailwind's alpha syntax).
-   * Default is indigo. Try teal: base '13 148 136', strong '15 118 110', soft '240 253 250',
-   * baseDark '45 212 191', strongDark '94 234 212', softDark '4 47 46'.
+   * Default is EliseAI purple (#7638FA); the brand's light periwinkle is #AFC1F6.
    */
   accent: {
-    base: '79 70 229', // indigo-600
-    strong: '67 56 202', // indigo-700
-    soft: '238 242 255', // indigo-50
-    baseDark: '129 140 248', // indigo-400
-    strongDark: '165 180 252', // indigo-300
-    softDark: '30 27 75', // indigo-950
+    base: '118 56 250', // EliseAI purple #7638FA
+    strong: '91 33 214', // #5B21D6 (hover / text on light)
+    soft: '241 235 255', // #F1EBFF
+    baseDark: '155 107 255', // #9B6BFF
+    strongDark: '196 168 255', // #C4A8FF
+    softDark: '42 22 99', // #2A1663
   },
 
   /** Default landing screen after sign-in. */

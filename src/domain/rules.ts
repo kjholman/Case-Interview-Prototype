@@ -367,7 +367,7 @@ export const RULES: Rule[] = [
   {
     id: 'conversation-escalated',
     label: 'Escalated conversation',
-    description: 'The assistant handed a conversation to staff.',
+    description: `${CONFIG.brand.assistantName} handed a conversation to staff.`,
     requires: ['crm'],
     evaluate(ctx) {
       return ctx.data.conversations
@@ -376,7 +376,7 @@ export const RULES: Rule[] = [
           propertyId: c.propertyId, severity: (c.topic === 'move_in' || c.topic === 'maintenance' ? 'high' : 'medium') as Severity,
           record: { collection: 'conversations' as const, id: c.id, label: `${c.contact.name} · ${c.subject}` },
           title: `${c.contact.name} needs a staff reply`,
-          reason: c.escalationReason ?? 'Escalated by the assistant.',
+          reason: c.escalationReason ?? `Escalated by ${CONFIG.brand.assistantName}.`,
           impact: `Waiting since ${c.messages[c.messages.length - 1]?.at.slice(11) ?? '—'} on ${c.channel.toUpperCase()}.`,
           suggestedAction: 'Open the conversation and reply as staff.',
         }));

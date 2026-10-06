@@ -1,3 +1,4 @@
+import { CONFIG } from '../config';
 import type { AssistantDraft, AssistantMode } from '../domain/assistant';
 import { Icon } from './Icon';
 import { StatusPill } from './StatusPill';
@@ -20,11 +21,11 @@ export interface AIResponsePreviewProps {
 
 export function AIResponsePreview({ draft, mode, onSend, onEdit }: AIResponsePreviewProps) {
   return (
-    <section aria-label="Assistant reply preview" className="flex flex-col gap-3">
+    <section aria-label={`${CONFIG.brand.assistantName} reply preview`} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm text-slate-900 dark:text-white">
           <Icon name="sparkles" className="h-4 w-4 text-accent" />
-          What the assistant would say
+          What {CONFIG.brand.assistantName} would say
         </h3>
         <StatusPill tone={mode.tone} label={mode.label} />
       </div>

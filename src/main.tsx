@@ -12,7 +12,7 @@ root.setProperty('--accent-soft-light', CONFIG.accent.soft);
 root.setProperty('--accent-dark', CONFIG.accent.baseDark);
 root.setProperty('--accent-strong-dark', CONFIG.accent.strongDark);
 root.setProperty('--accent-soft-dark', CONFIG.accent.softDark);
-document.title = CONFIG.productName;
+document.title = `${CONFIG.brand.name} · ${CONFIG.productName}`;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

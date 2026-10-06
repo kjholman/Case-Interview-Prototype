@@ -65,7 +65,7 @@ export function Conversations() {
           <div className="space-y-2 border-b border-slate-200 p-3 dark:border-slate-800">
             <div className="overflow-x-auto">
               <Segmented label="Filter conversations" value={filter} onChange={setFilter}
-                options={[{ value: 'needs', label: 'Needs reply', count: counts.needs }, { value: 'escalated', label: 'Escalated', count: counts.escalated }, { value: 'ai', label: 'AI' }, { value: 'all', label: 'All' }]} />
+                options={[{ value: 'needs', label: 'Needs reply', count: counts.needs }, { value: 'escalated', label: 'Escalated', count: counts.escalated }, { value: 'ai', label: CONFIG.brand.assistantName }, { value: 'all', label: 'All' }]} />
             </div>
             <div className="flex gap-2">
               <SearchInput value={q} onChange={setQ} placeholder="Name or subject" label="Search conversations" className="flex-1" />
@@ -91,7 +91,7 @@ export function Conversations() {
                       <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{c.subject}</span>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
                         {c.escalated && c.status !== 'resolved' && <StatusPill tone="danger" label="Escalated" />}
-                        <StatusPill tone={c.handledBy === 'ai' ? 'accent' : 'neutral'} label={c.handledBy === 'ai' ? 'AI' : 'Staff'} dot={false} />
+                        <StatusPill tone={c.handledBy === 'ai' ? 'accent' : 'neutral'} label={c.handledBy === 'ai' ? CONFIG.brand.assistantName : 'Staff'} dot={false} />
                         {c.status === 'resolved' && <StatusPill tone="success" label="Resolved" dot={false} />}
                         <span className="text-[11px] muted">{c.contact.kind === 'prospect' ? 'Prospect' : 'Resident'}</span>
                       </span>
@@ -107,7 +107,7 @@ export function Conversations() {
         {/* Thread + preview */}
         {selected ? <ThreadPane key={selected.id} conv={selected} onBack={() => select(undefined)} dispatch={dispatch} /> : (
           <div className="hidden items-center justify-center lg:flex">
-            <EmptyState icon="message" title="Select a conversation" body="See the thread and what the assistant would say based on current data." />
+            <EmptyState icon="message" title="Select a conversation" body={`See the thread and what ${CONFIG.brand.assistantName} would say based on current data.`} />
           </div>
         )}
       </div>
@@ -128,8 +128,8 @@ function ThreadPane({ conv, onBack, dispatch }: { conv: Conversation; onBack: ()
   const unit = resident ? l.unitById.get(resident.unitId) : prospect?.interestedUnitId ? l.unitById.get(prospect.interestedUnitId) : undefined;
 
   const sendAI = () => {
-    dispatch({ type: 'addMessage', conversationId: conv.id, message: { from: 'ai', authorName: 'Assistant', body: draft.text } });
-    toast(mode.autoSend ? 'Assistant reply sent' : 'Approved and sent');
+    dispatch({ type: 'addMessage', conversationId: conv.id, message: { from: 'ai', authorName: CONFIG.brand.assistantName, body: draft.text } });
+    toast(mode.autoSend ? `${CONFIG.brand.assistantName} sent the reply` : 'Approved and sent');
   };
   const sendStaff = (text: string) => {
     dispatch({ type: 'addMessage', conversationId: conv.id, message: { from: 'staff', authorName: actor, body: text } });
@@ -154,8 +154,8 @@ function ThreadPane({ conv, onBack, dispatch }: { conv: Conversation; onBack: ()
           </div>
           <div className="flex flex-wrap gap-1.5">
             {conv.handledBy === 'ai'
-              ? <button type="button" className="btn-secondary btn-sm" onClick={() => update({ handledBy: 'staff', staffName: actor }, 'Took over conversation from assistant', 'You are handling this conversation')}>Take over</button>
-              : <button type="button" className="btn-secondary btn-sm" onClick={() => update({ handledBy: 'ai', staffName: undefined }, 'Handed conversation back to assistant', 'Handed back to the assistant')}>Hand back to AI</button>}
+              ? <button type="button" className="btn-secondary btn-sm" onClick={() => update({ handledBy: 'staff', staffName: actor }, `Took over conversation from ${CONFIG.brand.assistantName}`, 'You are handling this conversation')}>Take over</button>
+              : <button type="button" className="btn-secondary btn-sm" onClick={() => update({ handledBy: 'ai', staffName: undefined }, `Handed conversation back to ${CONFIG.brand.assistantName}`, `Handed back to ${CONFIG.brand.assistantName}`)}>Hand back to {CONFIG.brand.assistantName}</button>}
             {conv.status !== 'resolved'
               ? <button type="button" className="btn-secondary btn-sm" onClick={() => update({ status: 'resolved', escalated: false }, 'Resolved conversation', 'Resolved')}><Icon name="check" className="h-3.5 w-3.5" />Resolve</button>
               : <button type="button" className="btn-ghost btn-sm" onClick={() => update({ status: 'open' }, 'Reopened conversation', 'Reopened')}>Reopen</button>}

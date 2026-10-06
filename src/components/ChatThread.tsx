@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CONFIG } from '../config';
 import { formatDateTime } from '../domain/dates';
 import type { Channel, Message } from '../domain/types';
 import { Icon, type IconName } from './Icon';
@@ -58,7 +59,7 @@ export function ChatThread({ messages, channel, composer }: ChatThreadProps) {
                 channel === 'voice' && m.body.startsWith('[Call') && 'italic')}>
                 <div className={cx('mb-0.5 flex items-center gap-1 text-[11px] font-medium', m.from === 'staff' ? 'text-slate-300 dark:text-slate-600' : 'text-slate-500 dark:text-slate-400')}>
                   {m.from === 'ai' && <Icon name="sparkles" className="h-3 w-3 text-accent" />}
-                  {m.from === 'ai' ? 'Assistant' : m.from === 'staff' ? `${m.authorName} · staff` : m.authorName}
+                  {m.from === 'ai' ? CONFIG.brand.assistantName : m.from === 'staff' ? `${m.authorName} · staff` : m.authorName}
                   <span aria-hidden>·</span>
                   <time>{formatDateTime(m.at)}</time>
                 </div>

@@ -1,3 +1,12 @@
+/* Inter (EliseAI's typeface), latin subset only, bundled so the single-file build works offline. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,7 +18,7 @@
   --accent-soft: var(--accent-soft-light, 238 242 255);
   color-scheme: light;
 }
-:root.dark {
+.dark {
   --accent: var(--accent-dark, 129 140 248);
   --accent-strong: var(--accent-strong-dark, 165 180 252);
   --accent-soft: var(--accent-soft-dark, 30 27 75);

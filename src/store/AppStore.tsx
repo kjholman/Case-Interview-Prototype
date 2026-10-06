@@ -272,8 +272,8 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         data: patchRecord(state.data, 'conversations', conv.id, { messages: [...conv.messages, msg], status: 'waiting' }),
         audit: log({
-          actor: action.message.from === 'ai' ? 'Assistant' : actor,
-          action: `${action.message.from === 'ai' ? 'Assistant sent' : 'Sent'} ${conv.channel.toUpperCase()} reply`,
+          actor: action.message.from === 'ai' ? CONFIG.brand.assistantName : actor,
+          action: `${action.message.from === 'ai' ? `${CONFIG.brand.assistantName} sent` : 'Sent'} ${conv.channel.toUpperCase()} reply`,
           mode: action.message.from === 'ai' && state.settings.automationLevel > 1 ? 'automatic' : 'manual',
           target: { collection: 'conversations', id: conv.id, label: `${conv.contact.name} · ${conv.subject}` },
           propertyId: conv.propertyId,
