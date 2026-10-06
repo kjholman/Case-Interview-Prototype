@@ -4,7 +4,6 @@ import { CONFIG, type ScreenId } from '../config';
 import { AutomationLevelControl } from '../components/AutomationLevelControl';
 import { Icon } from '../components/Icon';
 import { Modal, cx, useToast } from '../components/ui';
-import { formatWeekday, TODAY } from '../domain/dates';
 import { SCREENS, enabledScreens } from '../screens/registry';
 import { useAlerts, useScopedData, useStore } from '../store/AppStore';
 import { useTheme, type ThemePref } from './theme';
@@ -100,7 +99,6 @@ function SidebarFooter() {
         <AutomationLevelControl compact value={state.settings.automationLevel}
           onChange={(level) => { dispatch({ type: 'setLevel', level }); toast(`Automation set to Level ${level}`, { tone: 'info' }); }} />
       </div>
-      <p className="flex items-center gap-1.5 text-[11px] muted"><Icon name="calendar" className="h-3.5 w-3.5" />Demo date: {formatWeekday(TODAY)}, 2026</p>
     </div>
   );
 }

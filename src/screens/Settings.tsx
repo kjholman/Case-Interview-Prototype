@@ -4,7 +4,7 @@ import { AutomationLevelControl } from '../components/AutomationLevelControl';
 import { Icon } from '../components/Icon';
 import { Card, PageHeader, Segmented, Switch, useToast } from '../components/ui';
 import { summarizeRoutes } from '../domain/automation';
-import { formatLongDate, TODAY } from '../domain/dates';
+import { TODAY } from '../domain/dates';
 import { RULES } from '../domain/rules';
 import type { AutomationLevel } from '../domain/types';
 import { ResetModal } from '../shell/AppShell';
@@ -87,7 +87,7 @@ export function Settings() {
               </div>
               <div className="rounded-md border border-slate-200 p-3 dark:border-slate-800">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Demo data</p>
-                <p className="mt-0.5 text-xs muted">Fixed date {formatLongDate(TODAY)} · seed {CONFIG.seed} · changes are saved in this browser only.</p>
+                <p className="mt-0.5 text-xs muted">Changes are saved in this browser only.</p>
                 <button type="button" className="btn-secondary mt-2" onClick={() => setConfirm(true)}><Icon name="refresh" />Reset demo data</button>
               </div>
             </div>
