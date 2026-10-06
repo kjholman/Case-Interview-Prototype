@@ -7,6 +7,7 @@ import { CONFIG, type IntegrationId } from '../config';
 import { addDays, dueLabel, formatDate, formatWeekday, relativeDay } from './dates';
 import { formatCurrency } from './impact';
 import type { AutomationLevel, Conversation, Dataset, ISODate, Task, Unit } from './types';
+import { woNumber } from './lifecycle';
 import { forecastPlan, unitPlan } from './workplan';
 
 export interface AssistantSource {
@@ -98,6 +99,13 @@ export function draftAssistantReply(
       }
     }
     const list = options.map((u) => `unit ${u.number} (${u.sqft.toLocaleString()} sq ft) at ${formatCurrency(u.rent)}/month, available ${u.availableDate! <= today ? 'now' : formatDate(u.availableDate)}`);
+    if (conv.topic === 'tour' && p.stage === 'tour_scheduled' && p.tourDate && p.tourDate >= today) {
+      sources.push({ label: `Tour ${formatWeekday(p.tourDate)}${p.tourTime ? `, ${p.tourTime}` : ''}`, system: 'CRM' });
+      return {
+        text: `Hi ${name}, you're all set for a tour on ${formatWeekday(p.tourDate)}${p.tourTime ? ` at ${p.tourTime}` : ''}. Check in at the leasing office — bring a photo ID. Reply here if you need to change the time.`,
+        sources, holds,
+      };
+    }
     const noShow = p.stage === 'tour_scheduled' && p.tourDate && p.tourDate < today;
     const intro = noShow
       ? `Hi ${name}, sorry we missed you on ${formatWeekday(p.tourDate)}! `
@@ -133,6 +141,18 @@ export function draftAssistantReply(
         return { text: `Hi ${name}, I'm sorry "${task.title.toLowerCase()}" is taking longer than it should. I've asked ${pmName}'s team to confirm a firm time today, and I'll text you as soon as it's set.`, sources, holds };
       }
       const when = task.due <= today ? 'today' : formatWeekday(task.due);
+      if (task.priority === 'urgent' && task.createdDate === today) {
+        return {
+          text: `Hi ${name}, I've logged this as an emergency (work order ${woNumber(task)}) and alerted the on-call technician. If water is involved, shut off the valve under the sink or behind the toilet. If you smell gas or see fire, leave the home and call 911. Someone from the team will call you within 15 minutes.`,
+          sources, holds,
+        };
+      }
+      if (task.createdDate === today && task.status === 'todo') {
+        return {
+          text: `Thanks ${name}, I've put in work order ${woNumber(task)} for "${task.title.toLowerCase()}"${task.category ? ` (${task.category})` : ''}. ${who ?? 'A technician'} will take care of it ${when === 'today' ? 'today' : `by ${when}`}. They'll knock before entering and leave a note when finished.`,
+          sources, holds,
+        };
+      }
       return { text: `Hi ${name}, ${who ?? 'a technician'} is scheduled to take care of "${task.title.toLowerCase()}" ${when === 'today' ? 'today' : `by ${when}`}. They will knock first and leave a note when finished.`, sources, holds };
     }
     case 'renewal': {
@@ -148,6 +168,10 @@ export function draftAssistantReply(
       return { text: `Hi ${name}, your current balance is ${formatCurrency(r.balance)}. ${r.balance > 1000 ? `I've asked ${pmName} about splitting it into two payments and they will follow up today.` : 'You can split it into two payments: half by Friday and the rest by the 20th. Want me to set that up?'}`, sources, holds };
     }
     case 'move_out': {
+      if (r.stage !== 'notice_given') {
+        sources.push({ label: `Lease ends ${formatDate(r.leaseEnd)}`, system: 'PMS' });
+        return { text: `Hi ${name}, thanks for letting us know. Your lease ends ${formatDate(r.leaseEnd)} and 60 days' written notice is required. I've asked ${pmName} to reach out today with your options and the next steps.`, sources, holds };
+      }
       sources.push({ label: `Move-out ${formatDate(unit?.moveOutDate ?? r.leaseEnd)}`, system: 'PMS' });
       return { text: `Hi ${name}, your move-out date is ${formatWeekday(unit?.moveOutDate ?? r.leaseEnd)}. Please return all keys and fobs to the office and leave the home broom-clean. We'll email your deposit statement within 30 days.`, sources, holds };
     }

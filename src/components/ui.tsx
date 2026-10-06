@@ -128,20 +128,20 @@ export function ChipToggle({ pressed, onClick, children }: { pressed: boolean; o
 
 /* ── Modal (confirm) ──────────────────────────────────────────────────────── */
 
-export function Modal({ open, onClose, title, children, actions }: { open: boolean; onClose: () => void; title: string; children: ReactNode; actions: ReactNode }) {
+export function Modal({ open, onClose, title, children, actions, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; actions: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>('button, input, select, textarea')?.focus();
+    ref.current?.querySelector<HTMLElement>('[autofocus], button, input, select, textarea')?.focus();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => { window.removeEventListener('keydown', onKey); prev?.focus(); };
-  }, [open, onClose]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="card w-full max-w-md p-5 shadow-xl">
+      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className={cx('card max-h-[90vh] w-full overflow-y-auto p-5 shadow-xl', wide ? 'max-w-xl' : 'max-w-md')}>
         <h2 className="text-base text-slate-900 dark:text-white">{title}</h2>
         <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">{children}</div>
         <div className="mt-5 flex justify-end gap-2">{actions}</div>
@@ -160,7 +160,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback((message: string, opts: { tone?: Toast['tone']; action?: Toast['action'] } = {}) => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t.slice(-2), { id, message, tone: opts.tone ?? 'success', action: opts.action }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), Math.max(5000, message.length * 70));
   }, []);
   return (
     <ToastContext.Provider value={push}>

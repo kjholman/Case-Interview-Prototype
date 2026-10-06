@@ -14,6 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   useEffect(() => setNavOpen(false), [location.pathname]);
   useAutoRunToast();
+  useInboundResult();
 
   return (
     <div className="min-h-screen lg:pl-60">
@@ -217,4 +218,19 @@ function useAutoRunToast() {
       });
     }
   }, [state.lastAutoRun, toast, navigate]);
+}
+
+/** After a simulated inbound message: open the conversation and summarize what Elise did. */
+function useInboundResult() {
+  const { state } = useStore();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const seen = useRef(state.lastInbound.seq);
+  useEffect(() => {
+    const r = state.lastInbound;
+    if (r.seq === seen.current) return;
+    seen.current = r.seq;
+    if (r.conversationId) navigate(`/conversations?c=${r.conversationId}`);
+    toast(`${CONFIG.brand.assistantName}: ${r.summary.join(' · ')}`, { tone: r.held ? 'warning' : 'success' });
+  }, [state.lastInbound, toast, navigate]);
 }

@@ -12,9 +12,10 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { CONFIG, type IntegrationId } from '../config';
-import { daysBetween, dueLabel, formatDate } from './dates';
+import { addDays, daysBetween, dueLabel, formatDate } from './dates';
 import { formatCurrency } from './impact';
 import type { Alert, Dataset, ISODate, Prospect, Resident, Severity, StaffMember, Task, Unit } from './types';
+import { STANDARD_MAKE_READY } from './lifecycle';
 import { forecastPlan, unitPlan } from './workplan';
 
 /* ── Context and indexes ──────────────────────────────────────────────────── */
@@ -268,14 +269,28 @@ export const RULES: Rule[] = [
     evaluate(ctx) {
       return ctx.data.units
         .filter((u) => (u.status === 'vacant' || u.status === 'notice' || u.status === 'leased') && !unitPlan(ctx.tasksByUnit.get(u.id) ?? [], u.id).length)
-        .map((u) => ({
-          propertyId: u.propertyId, severity: (u.status === 'notice' ? 'medium' : 'high') as Severity,
-          record: { collection: 'units' as const, id: u.id, label: unitLabel(u) },
-          title: `${unitLabel(u)} has no make-ready plan`,
-          reason: `${u.status === 'notice' ? 'Moving out' : 'Moved out'} ${formatDate(u.moveOutDate)}, available ${formatDate(u.availableDate)}, but no work is scheduled.`,
-          impact: 'The available date is a guess until work is scheduled.',
-          suggestedAction: 'Create the standard make-ready plan and assign it.',
-        }));
+        .map((u) => {
+          const ref = { collection: 'units' as const, id: u.id, label: unitLabel(u) };
+          const start = u.moveOutDate && addDays(u.moveOutDate, 1) > ctx.today ? addDays(u.moveOutDate, 1) : ctx.today;
+          const days = STANDARD_MAKE_READY.reduce((s, x) => s + x.days, 0);
+          return {
+            propertyId: u.propertyId, severity: (u.status === 'notice' ? 'medium' : 'high') as Severity, record: ref,
+            title: `${unitLabel(u)} has no make-ready plan`,
+            reason: `${u.status === 'notice' ? 'Moving out' : 'Moved out'} ${formatDate(u.moveOutDate)}, available ${formatDate(u.availableDate)}, but no work is scheduled.`,
+            impact: 'The available date is a guess until work is scheduled.',
+            suggestedAction: 'Create the standard make-ready plan and assign it.',
+            fix: {
+              label: 'Create standard make-ready plan',
+              risk: 'low' as const,
+              target: ref,
+              action: 'createMakeReadyPlan' as const,
+              changes: [{
+                field: 'makeReadyPlan', label: 'Make-ready plan', from: 'None', readOnly: true,
+                to: `${STANDARD_MAKE_READY.length} steps, ${formatDate(start)}–${formatDate(addDays(start, days - 1))}`,
+              }],
+            },
+          };
+        });
     },
   },
   {

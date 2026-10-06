@@ -15,9 +15,10 @@
  */
 import { CONFIG } from '../config';
 import { addDays, daysBetween, maxDate } from './dates';
+import { TOUR_SLOTS, triage } from './elise';
 import { createRng, type Rng } from './random';
 import type {
-  AuditEvent, Conversation, ConversationTopic, Channel, Dataset, ISODate, Message, Priority,
+  AuditEvent, Conversation, ConversationTopic, Channel, Dataset, ISODate, LedgerEntry, Message, Priority,
   Property, Prospect, ProspectStage, Resident, StaffMember, Task, TaskType, Unit, UnitStatus, Vendor,
 } from './types';
 
@@ -386,10 +387,48 @@ export function createSeedData(seed: number = CONFIG.seed, today: ISODate = CONF
   /* 4c. Conversations */
   conversations.push(...buildConversations(rng, today, { units, residents, prospects, tasks, staff }));
 
+  /* 5. Details added with a separate random stream so the dataset above stays stable. */
+  const rng2 = createRng(seed + 1);
+  const linked = new Set(conversations.map((c) => c.relatedTaskId).filter(Boolean));
+  for (const t of tasks) {
+    if (t.sequence !== undefined) t.source = 'make_ready';
+    else {
+      t.category = triage(t.title, 'resident').category ?? 'General';
+      t.source = linked.has(t.id) ? 'elise' : rng2.weighted([['elise', 55], ['portal', 30], ['staff', 15]]);
+    }
+  }
+  for (const p of prospects) {
+    if (p.tourDate) {
+      p.tourTime = rng2.pick(TOUR_SLOTS);
+      p.tourBookedBy = rng2.chance(0.75) ? 'elise' : 'staff';
+    }
+  }
+  const ledger = buildLedger(residents, units, today);
+
   return {
     portfolio: { id: 'pf-1', name: CONFIG.organizationName, propertyIds: properties.map((p) => p.id) },
-    properties, units, residents, prospects, staff, vendors: VENDORS, tasks, conversations,
+    properties, units, residents, prospects, staff, vendors: VENDORS, tasks, conversations, ledger,
   };
+}
+
+/** Two months of rent charges and payments per resident, summing to their current balance. */
+function buildLedger(residents: Resident[], units: Unit[], today: ISODate): LedgerEntry[] {
+  const out: LedgerEntry[] = [];
+  const month = today.slice(0, 8); // 'YYYY-MM-'
+  const prev = addDays(`${month}01`, -1).slice(0, 8);
+  for (const r of residents) {
+    const rent = units.find((u) => u.id === r.unitId)?.rent ?? 0;
+    let n = 0;
+    const add = (date: ISODate, type: LedgerEntry['type'], description: string, amount: number) =>
+      out.push({ id: `l-${r.id}-${++n}`, residentId: r.id, propertyId: r.propertyId, date, type, description, amount });
+    if (r.balance > rent) add(`${prev}01`, 'balance_forward', 'Balance forward', r.balance - rent);
+    add(`${prev}01`, 'rent', 'Rent', rent);
+    add(`${prev}03`, 'payment', 'Online payment', -rent);
+    add(`${month}01`, 'rent', 'Rent', rent);
+    const paid = r.balance >= rent ? 0 : rent - r.balance;
+    if (paid > 0) add(`${month}0${paid === rent ? 2 : 3}`, 'payment', paid === rent ? 'Online payment' : 'Partial payment', -paid);
+  }
+  return out;
 }
 
 /* ── Conversations ────────────────────────────────────────────────────────── */
@@ -422,7 +461,8 @@ function buildConversations(rng: Rng, today: ISODate, ctx: ConvCtx): Conversatio
     let minutes = rng.int(8 * 60, 14 * 60);
     const leasing = ctx.staff.find((s) => s.propertyId === propertyId && s.role === 'Leasing agent')!;
     const messages: Message[] = lines.map(([from, body], i) => {
-      minutes += rng.int(1, 25);
+      // Elise answers within a minute; staff and contacts take longer.
+      minutes += from === 'ai' ? rng.int(0, 1) : from === 'staff' ? rng.int(6, 40) : rng.int(2, 25);
       return {
         id: `m-${n}-${i}`,
         at: `${day}T${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`,

@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CONFIG } from '../config';
 import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/Icon';
 import { KeyNumber } from '../components/KeyNumber';
 import { SEVERITY, StatusPill, UNIT_STATUS } from '../components/StatusPill';
 import { Card, PageHeader, cx } from '../components/ui';
@@ -9,6 +10,7 @@ import { addDays, formatDate, formatWeekday, relativeDay, TODAY } from '../domai
 import type { UnitStatus } from '../domain/types';
 import { recordLink } from '../shell/links';
 import { useAlerts, useLookups, useScopedData, useStore } from '../store/AppStore';
+import { InboundSimulator } from './shared/InboundSimulator';
 
 const STATUS_BAR: Record<UnitStatus, string> = {
   occupied: 'bg-slate-300 dark:bg-slate-600', notice: 'bg-amber-400', vacant: 'bg-red-600', ready: 'bg-emerald-500', leased: 'bg-sky-500',
@@ -66,6 +68,8 @@ export function Overview() {
         <KeyNumber label="Needs a person" value={exceptions.length + approvals.length} hint={`${exceptions.length} exceptions · ${approvals.length} approvals`} tone={m.critical ? 'bad' : 'default'} icon="alert" to="/exceptions" />
         <KeyNumber label="Automatic changes today" value={autoToday} hint={`Automation Level ${state.settings.automationLevel}`} icon="bolt" to="/activity" />
       </div>
+
+      <EliseCard />
 
       <Card className="mt-4" title="Units by status" bodyClassName="p-4">
         <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" role="img"
@@ -157,5 +161,74 @@ export function Overview() {
         </Card>
       )}
     </>
+  );
+}
+
+const minutesBetween = (a: string, b: string) => (Date.parse(`${b}:00Z`) - Date.parse(`${a}:00Z`)) / 60_000;
+const median = (xs: number[]) => {
+  if (!xs.length) return undefined;
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+};
+const fmtMinutes = (m?: number) => (m === undefined ? '—' : m < 1 ? 'Under 1 min' : m < 60 ? `${Math.round(m)} min` : `${(m / 60).toFixed(1)} hrs`);
+
+/** What Elise is doing: share of conversations she handles, response time, work orders and tours. */
+function EliseCard() {
+  const data = useScopedData();
+  const [simOpen, setSimOpen] = useState(false);
+  const name = CONFIG.brand.assistantName;
+  const m = useMemo(() => {
+    const elise: number[] = [];
+    const staff: number[] = [];
+    for (const c of data.conversations) {
+      // Response time = reply time minus the most recent message from the contact before it.
+      let lastInbound: string | undefined;
+      for (const msg of c.messages) {
+        if (msg.from === 'contact') lastInbound = msg.at;
+        else if (lastInbound) {
+          (msg.from === 'ai' ? elise : staff).push(minutesBetween(lastInbound, msg.at));
+          lastInbound = undefined;
+          if (msg.from === 'ai') continue;
+        } else if (msg.from === 'staff') {
+          const prev = [...c.messages].reverse().find((x) => x.from === 'contact' && x.at <= msg.at);
+          if (prev) staff.push(minutesBetween(prev.at, msg.at));
+        }
+      }
+    }
+    const handled = data.conversations.filter((c) => c.handledBy === 'ai' && !c.escalated).length;
+    const wo = data.tasks.filter((t) => t.source === 'elise');
+    const tours = data.prospects.filter((p) => p.tourDate && p.tourBookedBy === 'elise');
+    return {
+      share: data.conversations.length ? Math.round((handled / data.conversations.length) * 100) : 0,
+      escalated: data.conversations.filter((c) => c.escalated && c.status !== 'resolved').length,
+      eliseMedian: median(elise), staffMedian: median(staff),
+      woOpen: wo.filter((t) => t.status !== 'done').length, woTotal: wo.length,
+      tours: tours.length, toursUpcoming: tours.filter((p) => p.stage === 'tour_scheduled' && p.tourDate! >= TODAY).length,
+    };
+  }, [data]);
+
+  return (
+    <section className="dark relative mt-4 overflow-hidden rounded-lg bg-[#0B0A12] p-4 text-white">
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-20 h-48 w-72 rounded-full bg-[#7638FA]/40 blur-3xl" />
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm text-white"><Icon name="sparkles" className="h-4 w-4 text-[#AFC1F6]" />{name} across your properties</h2>
+        <button type="button" className="btn btn-sm bg-white text-slate-900 hover:bg-slate-200" onClick={() => setSimOpen(true)}><Icon name="send" className="h-3.5 w-3.5" />Simulate inbound message</button>
+      </div>
+      <dl className="relative mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[
+          { label: `Conversations ${name} handled without staff`, value: `${m.share}%`, hint: `${m.escalated} escalated to staff` },
+          { label: 'Median first response', value: fmtMinutes(m.eliseMedian), hint: `Staff: ${fmtMinutes(m.staffMedian)}` },
+          { label: `Work orders created by ${name}`, value: String(m.woTotal), hint: `${m.woOpen} still open` },
+          { label: `Tours booked by ${name}`, value: String(m.tours), hint: `${m.toursUpcoming} upcoming` },
+        ].map((x) => (
+          <div key={x.label}>
+            <dt className="text-xs text-slate-400">{x.label}</dt>
+            <dd className="mt-1 text-2xl font-semibold tabular-nums">{x.value}</dd>
+            <dd className="text-xs text-[#AFC1F6]">{x.hint}</dd>
+          </div>
+        ))}
+      </dl>
+      <InboundSimulator open={simOpen} onClose={() => setSimOpen(false)} />
+    </section>
   );
 }

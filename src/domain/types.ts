@@ -89,6 +89,10 @@ export interface Prospect {
   tourDate?: ISODate;
   followUpDate?: ISODate;
   lastContactDate: ISODate;
+  /** Tour time label, e.g. "10:00 AM". */
+  tourTime?: string;
+  /** Who booked the tour. */
+  tourBookedBy?: 'elise' | 'staff';
   /** Lease dates once signed. */
   leaseStart?: ISODate;
   leaseEnd?: ISODate;
@@ -139,6 +143,10 @@ export interface Task {
   /** Notes captured in the field app. */
   notes?: string;
   photoCount?: number;
+  /** Service requests: trade category (Plumbing, HVAC …). */
+  category?: string;
+  /** How the work order was created. */
+  source?: 'elise' | 'staff' | 'portal' | 'make_ready';
 }
 
 /* ── Communication ────────────────────────────────────────────────────────── */
@@ -194,6 +202,8 @@ export interface FieldChange {
   to: FieldValue;
   /** Optional choices when a person edits the proposed value. */
   options?: { value: string; label: string }[];
+  /** Shown but not editable in the Approval queue (e.g. a generated plan). */
+  readOnly?: boolean;
 }
 
 /** A concrete change the system proposes to fix an alert. */
@@ -203,6 +213,8 @@ export interface Fix {
   risk: 'low' | 'high';
   target: RecordRef;
   changes: FieldChange[];
+  /** Fixes that do more than set fields. Handled in automation.applyFix. */
+  action?: 'createMakeReadyPlan';
 }
 
 /** Alert / Exception produced by a rule. Ids are stable: `${ruleId}:${recordId}`. */
@@ -236,6 +248,21 @@ export interface AuditEvent {
   note?: string;
 }
 
+/* ── Resident ledger (PMS) ────────────────────────────────────────────────── */
+
+export type LedgerType = 'rent' | 'fee' | 'payment' | 'credit' | 'balance_forward';
+
+export interface LedgerEntry {
+  id: string;
+  residentId: string;
+  propertyId: string;
+  date: ISODate;
+  type: LedgerType;
+  description: string;
+  /** Positive = charge, negative = payment or credit. */
+  amount: number;
+}
+
 /* ── The whole dataset ────────────────────────────────────────────────────── */
 
 export interface Dataset {
@@ -248,6 +275,7 @@ export interface Dataset {
   vendors: Vendor[];
   tasks: Task[];
   conversations: Conversation[];
+  ledger: LedgerEntry[];
 }
 
 export type AutomationLevel = 1 | 2 | 3;

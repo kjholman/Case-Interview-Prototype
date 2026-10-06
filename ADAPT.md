@@ -118,6 +118,8 @@ automation level to 1, and walk through the story.
 | "Ordered steps → end date" | `src/domain/projection.ts` (generic), `src/domain/workplan.ts` (make-ready) |
 | Impact math | `src/domain/impact.ts` |
 | Assistant reply logic | `src/domain/assistant.ts` |
+| How Elise triages and acts on inbound messages | `src/domain/elise.ts` (`CATEGORIES`, `TOPICS`, `EMERGENCY`, `processInbound`) |
+| PMS workflows (lease, notice, renewal, payment, make-ready plan) | `src/domain/lifecycle.ts` |
 | Navigation icons and routes | `src/screens/registry.tsx` |
 | State, actions, audit logging | `src/store/AppStore.tsx` |
 
@@ -257,6 +259,12 @@ This is the kit's default story, so the changes are mostly emphasis.
 ---
 
 ## Demo script that works for any case (3 minutes)
+
+**Start with Elise doing the work:** on Overview, click **Simulate inbound message**, send "My AC isn't cooling" at
+Level 1 (work order created, reply held, assignment waiting in Approvals), switch to Level 2 and send another
+from a different resident (assigned and answered automatically), then send the "water everywhere" example
+(emergency escalation). Then:
+
 
 1. **Overview**: "Here's the portfolio this morning. Nine units will miss their date."
 2. **Exceptions**: open the critical one and say why it's flagged. "View unit" opens the drawer

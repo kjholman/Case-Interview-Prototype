@@ -6,7 +6,8 @@ import { EmptyState } from '../components/EmptyState';
 import { StatusPill, type Tone } from '../components/StatusPill';
 import { ChipToggle, PageHeader, SearchInput } from '../components/ui';
 import { formatDateTime } from '../domain/dates';
-import type { AuditEvent, AuditMode } from '../domain/types';
+import type { AuditEvent, AuditMode, RecordRef } from '../domain/types';
+import { Icon } from '../components/Icon';
 import { useFormatValue } from '../shell/format';
 import { recordLink } from '../shell/links';
 import { useLookups, useStore } from '../store/AppStore';
@@ -17,6 +18,12 @@ export const AUDIT_MODE: Record<AuditMode, { label: string; tone: Tone }> = {
   rejected: { label: 'Rejected', tone: 'danger' },
   manual: { label: 'Manual', tone: 'neutral' },
   snoozed: { label: 'Snoozed', tone: 'warning' },
+};
+
+/** Which system of record each kind of change is written back to. */
+const SYSTEM: Record<RecordRef['collection'], string> = {
+  units: CONFIG.integrations.pms.short, residents: CONFIG.integrations.pms.short,
+  prospects: CONFIG.integrations.crm.short, conversations: CONFIG.integrations.crm.short, tasks: CONFIG.integrations.workOrders.short,
 };
 
 export function Activity() {
@@ -45,6 +52,8 @@ export function Activity() {
         {e.note && <p className="text-xs muted">{e.note}</p>}
       </div>
     ) },
+    { id: 'system', header: 'Written to', hideBelow: 'md', sortValue: (e) => (e.target ? SYSTEM[e.target.collection] : ''),
+      cell: (e) => e.target ? <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-slate-600 dark:text-slate-400"><Icon name="check" className="h-3 w-3 text-emerald-600" />{SYSTEM[e.target.collection]}</span> : <span className="muted">—</span> },
     { id: 'changes', header: 'Changes', hideBelow: 'lg', cell: (e) => e.changes?.length ? (
       <ul className="space-y-0.5 text-xs">
         {e.changes.map((c) => (

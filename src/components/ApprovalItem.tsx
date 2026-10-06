@@ -52,7 +52,7 @@ export function ApprovalItem({ alert, formatValue, onAccept, onReject }: Approva
                 <td className="py-1.5 pr-2 text-slate-500 line-through decoration-slate-400 dark:text-slate-400">{formatValue(c, c.from)}</td>
                 <td className="py-1.5 pr-2 text-slate-400"><Icon name="chevronRight" className="h-3.5 w-3.5" /></td>
                 <td className="py-1.5 font-medium text-slate-900 dark:text-white">
-                  {mode === 'edit' ? (
+                  {mode === 'edit' && !c.readOnly ? (
                     c.options ? (
                       <select aria-label={`New ${c.label}`} className="input py-1" value={String(draft[i] ?? '')} onChange={(e) => setDraft((d) => d.map((v, j) => (j === i ? e.target.value : v)))}>
                         {c.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

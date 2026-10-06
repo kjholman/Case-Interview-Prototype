@@ -11,7 +11,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { CONFIG } from '../config';
-import type { Alert, AutomationLevel, CollectionName, Dataset, Fix } from './types';
+import { createMakeReadyPlan } from './lifecycle';
+import type { Alert, AutomationLevel, CollectionName, Dataset, Fix, ISODate } from './types';
 
 export type Route = 'auto' | 'approval' | 'exception';
 
@@ -36,7 +37,8 @@ export function automationActor(level: AutomationLevel) {
 }
 
 /** Applies a fix's field changes to its target record, returning a new dataset (immutable). */
-export function applyFix(data: Dataset, fix: Fix): Dataset {
+export function applyFix(data: Dataset, fix: Fix, today: ISODate = CONFIG.today): Dataset {
+  if (fix.action === 'createMakeReadyPlan') return createMakeReadyPlan(data, fix.target.id, today);
   const patch: Record<string, unknown> = {};
   for (const c of fix.changes) patch[c.field] = c.to === null ? undefined : c.to;
   return patchRecord(data, fix.target.collection, fix.target.id, patch);

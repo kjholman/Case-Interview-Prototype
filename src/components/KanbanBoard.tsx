@@ -73,7 +73,7 @@ export function KanbanBoard<T>({ columns, items, getId, getColumn, renderCard, o
                     </div>
                     {onMove && (
                       <label className="mt-2 flex items-center gap-1.5 text-[11px] muted">
-                        <span>Move to</span>
+                        <span className="whitespace-nowrap">Move to</span>
                         <select value={col.id} onChange={(e) => onMove(id, e.target.value)}
                           className="rounded border border-slate-200 bg-transparent px-1 py-0.5 text-[11px] text-slate-700 dark:border-slate-700 dark:text-slate-300">
                           {columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}

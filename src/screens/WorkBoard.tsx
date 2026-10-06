@@ -8,6 +8,7 @@ import { PRIORITY, StatusPill, TASK_STATUS, UNIT_STATUS } from '../components/St
 import { TimelineBar, type TimelineRow } from '../components/TimelineBar';
 import { ChipToggle, PageHeader, SearchInput, Segmented, Select, cx, useToast } from '../components/ui';
 import { addDays, daysBetween, dueLabel, formatDate, TODAY } from '../domain/dates';
+import { woNumber } from '../domain/lifecycle';
 import type { Task, TaskStatus } from '../domain/types';
 import { forecastPlan, unitPlan } from '../domain/workplan';
 import { useWhoLabel } from '../shell/format';
@@ -48,7 +49,7 @@ export function WorkBoard() {
     if (t.status === 'done' && daysBetween(t.completedDate ?? t.due, TODAY) > 7) return false; // board shows the last week of done work
     if (q) {
       const s = q.toLowerCase();
-      return t.title.toLowerCase().includes(s) || unitNum(t)?.includes(s) || who(t)?.toLowerCase().includes(s);
+      return t.title.toLowerCase().includes(s) || woNumber(t).toLowerCase().includes(s) || unitNum(t)?.includes(s) || who(t)?.toLowerCase().includes(s);
     }
     return true;
   }), [data.tasks, kind, owner, onlyProblems, q, who]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -121,7 +122,8 @@ export function WorkBoard() {
                   {(t.priority === 'urgent' || t.priority === 'high') && <StatusPill {...PRIORITY[t.priority]} dot={false} />}
                 </div>
                 <p className="text-xs muted">
-                  {unitNum(t) ? `Unit ${unitNum(t)}` : 'Common area'}{state.propertyId === 'all' && ` · ${l.propertyById.get(t.propertyId)?.name.split(' ')[0]}`} · {t.type === 'service' ? 'Service' : `Make-ready ${t.sequence}`}
+                  <span className="font-mono">{woNumber(t)}</span> · {unitNum(t) ? `Unit ${unitNum(t)}` : 'Common area'}{state.propertyId === 'all' && ` · ${l.propertyById.get(t.propertyId)?.name.split(' ')[0]}`} · {t.type === 'service' ? t.category ?? 'Service' : `Make-ready ${t.sequence}`}
+                  {t.source === 'elise' && <StatusPill tone="accent" label={CONFIG.brand.assistantName} dot={false} className="ml-1 px-1.5 py-0 text-[10px]" />}
                 </p>
                 {t.status === 'blocked' && t.blockedReason && <p className="rounded bg-red-50 px-1.5 py-1 text-xs text-red-800 dark:bg-red-950/60 dark:text-red-300">{t.blockedReason}</p>}
                 <div className="flex items-center justify-between gap-2 text-xs">

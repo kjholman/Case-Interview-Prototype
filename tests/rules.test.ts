@@ -24,6 +24,7 @@ function dataset(over: Partial<Dataset> = {}): Dataset {
     vendors: [],
     tasks: [],
     conversations: [],
+    ledger: [],
     ...over,
   };
 }

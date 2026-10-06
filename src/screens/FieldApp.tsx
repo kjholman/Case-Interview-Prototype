@@ -7,6 +7,7 @@ import { PRIORITY, StatusPill, TASK_STATUS } from '../components/StatusPill';
 import { PageHeader, Segmented, Select, cx, useToast } from '../components/ui';
 import { CHECKLISTS } from '../domain/checklists';
 import { dueLabel, formatWeekday, TODAY } from '../domain/dates';
+import { woNumber } from '../domain/lifecycle';
 import type { Task } from '../domain/types';
 import { useLookups, useScopedData, useStore } from '../store/AppStore';
 
@@ -128,7 +129,7 @@ export function FieldApp() {
                           <span className={cx('h-10 w-1 shrink-0 rounded-full', t.status === 'blocked' ? 'bg-red-600' : late ? 'bg-amber-400' : t.status === 'done' ? 'bg-emerald-500' : 'bg-sky-500')} aria-hidden />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{t.title}</span>
-                            <span className="block truncate text-xs muted">{unitOf(t) ? `Unit ${unitOf(t)!.number}` : 'Common area'} · {t.type === 'service' ? 'Service request' : 'Make-ready'}</span>
+                            <span className="block truncate text-xs muted">{woNumber(t)} · {unitOf(t) ? `Unit ${unitOf(t)!.number}` : 'Common area'} · {t.type === 'service' ? t.category ?? 'Service request' : 'Make-ready'}</span>
                             <span className={cx('mt-0.5 block text-xs', t.status === 'blocked' ? 'text-red-700 dark:text-red-400' : late ? 'font-medium text-red-700 dark:text-red-400' : 'muted')}>
                               {t.status === 'blocked' ? 'Blocked' : t.status === 'done' ? 'Done' : dueLabel(t.due)}
                             </span>

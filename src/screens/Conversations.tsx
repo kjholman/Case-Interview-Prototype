@@ -12,6 +12,7 @@ import { formatDate, formatDateTime, TODAY } from '../domain/dates';
 import { formatCurrency } from '../domain/impact';
 import type { Channel, Conversation } from '../domain/types';
 import { useActor, useLookups, useScopedData, useStore } from '../store/AppStore';
+import { InboundSimulator } from './shared/InboundSimulator';
 
 type Filter = 'needs' | 'escalated' | 'ai' | 'all';
 const needsReply = (c: Conversation) => c.status !== 'resolved' && (c.escalated || c.messages[c.messages.length - 1]?.from === 'contact');
@@ -23,6 +24,7 @@ export function Conversations() {
   const [filter, setFilter] = useState<Filter>('needs');
   const [channel, setChannel] = useState<'all' | Channel>('all');
   const [q, setQ] = useState('');
+  const [simOpen, setSimOpen] = useState(false);
   const selectedId = params.get('c') ?? undefined;
   const cfg = CONFIG.screens.conversations;
 
@@ -58,7 +60,9 @@ export function Conversations() {
 
   return (
     <>
-      <PageHeader title={cfg.label} description={cfg.description} />
+      <PageHeader title={cfg.label} description={cfg.description}
+        actions={<button type="button" className="btn-primary" onClick={() => setSimOpen(true)}><Icon name="send" />Simulate inbound message</button>} />
+      <InboundSimulator open={simOpen} onClose={() => setSimOpen(false)} />
       <div className="card grid h-[calc(100vh-170px)] min-h-[560px] overflow-hidden lg:grid-cols-[320px_1fr] xl:grid-cols-[300px_1fr]">
         {/* List */}
         <div className={cx('flex min-h-0 flex-col border-slate-200 dark:border-slate-800 lg:border-r', selected && 'hidden lg:flex')}>

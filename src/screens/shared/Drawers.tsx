@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { CONFIG } from '../../config';
 import { DetailDrawer } from '../../components/DetailDrawer';
 import { Icon } from '../../components/Icon';
 import { PRIORITY, RESIDENT_STAGE, SEVERITY, StatusPill, TASK_STATUS, UNIT_STATUS } from '../../components/StatusPill';
@@ -7,6 +8,7 @@ import { TimelineBar, type TimelineBarItem } from '../../components/TimelineBar'
 import { Field, useToast } from '../../components/ui';
 import { addDays, dueLabel, formatDate, formatDateTime, maxDate, minDate, TODAY } from '../../domain/dates';
 import { formatCurrency } from '../../domain/impact';
+import { woNumber } from '../../domain/lifecycle';
 import type { FieldChange, Task, TaskStatus, UnitStatus } from '../../domain/types';
 import { forecastPlan, unitPlan } from '../../domain/workplan';
 import { useWhoLabel } from '../../shell/format';
@@ -81,6 +83,9 @@ export function UnitDrawer({ unitId, onClose }: { unitId?: string; onClose: () =
             </select>
           </label>
           {plan.length > 0 && <Link to={`/work?view=timeline&unit=${unit.id}`} className="btn-secondary btn-sm">Open on work board</Link>}
+          {!plan.length && unit.status !== 'occupied' && unit.status !== 'ready' && (
+            <button type="button" className="btn-primary btn-sm" onClick={() => { dispatch({ type: 'createPlan', unitId: unit.id }); toast(`Make-ready plan created for Unit ${unit.number}`); }}>Create make-ready plan</button>
+          )}
         </>
       }
     >
@@ -228,7 +233,7 @@ export function TaskDrawer({ taskId, onClose }: { taskId?: string; onClose: () =
 
   return (
     <DetailDrawer open onClose={onClose} title={task.title}
-      subtitle={<><StatusPill {...TASK_STATUS[task.status]} />{task.priority !== 'normal' && <StatusPill {...PRIORITY[task.priority]} dot={false} />}<span className={task.due < TODAY && task.status !== 'done' ? 'font-medium text-red-700 dark:text-red-400' : ''}>{task.status === 'done' ? `Done ${formatDate(task.completedDate)}` : dueLabel(task.due)}</span></>}
+      subtitle={<><span className="font-mono text-xs">{woNumber(task)}</span><StatusPill {...TASK_STATUS[task.status]} />{task.priority !== 'normal' && <StatusPill {...PRIORITY[task.priority]} dot={false} />}<span className={task.due < TODAY && task.status !== 'done' ? 'font-medium text-red-700 dark:text-red-400' : ''}>{task.status === 'done' ? `Done ${formatDate(task.completedDate)}` : dueLabel(task.due)}</span></>}
       footer={<><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button type="button" className="btn-primary" onClick={save}>Save changes</button></>}
     >
       <dl className="mb-6 grid grid-cols-2 gap-x-4 gap-y-3">
@@ -237,7 +242,8 @@ export function TaskDrawer({ taskId, onClose }: { taskId?: string; onClose: () =
         <Field label="Type">{task.type === 'service' ? 'Service request' : `Make-ready · step ${task.sequence} of ${planLen}`}</Field>
         <Field label="Assigned to">{who(task) ?? <span className="text-amber-700 dark:text-amber-400">Unassigned</span>}</Field>
         <Field label="Planned">{formatDate(task.start)} – {formatDate(task.due)} ({task.durationDays} day{task.durationDays === 1 ? '' : 's'})</Field>
-        <Field label="Created">{formatDate(task.createdDate)}</Field>
+        <Field label="Created">{formatDate(task.createdDate)} · {{ elise: `by ${CONFIG.brand.assistantName}`, portal: 'resident portal', staff: 'by staff', make_ready: 'make-ready plan' }[task.source ?? 'staff']}</Field>
+        {task.category && <Field label="Category">{task.category}</Field>}
       </dl>
 
       {alerts.length > 0 && (

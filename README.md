@@ -2,7 +2,8 @@
 
 A generic, realistic **property operations console** for multifamily housing, built to be adapted to a
 specific operational problem in 15–20 minutes. It ships with seeded mock data, a small rules engine,
-an automation-level policy, and ten screens that share one app shell.
+an automation-level policy, the core property-management and EliseAI workflows, and twelve screens
+that share one app shell.
 
 It does not solve one problem on purpose. It gives you a working, polished baseline: you change the
 data, the rules and the screen titles to fit the problem, and hide what you don't need.
@@ -57,15 +58,32 @@ Any of these restores the original dataset and settings (you stay signed in):
 | Screen | What it shows |
 | --- | --- |
 | **Overview** | Six key numbers, units by status, the most urgent exceptions, move-ins and move-outs in the next 14 days, and a breakdown by property |
-| **Units** | Sortable, filterable table with status pills, PMS vs CRM date mismatches and make-ready progress. A row opens a detail drawer |
+| **Units** | Sortable, filterable table with status pills, PMS vs CRM date mismatches and make-ready progress. A row opens a detail drawer (change status, create a make-ready plan) |
+| **Residents** | The PMS resident ledger: lease dates, renewal status, balance and charges/payments. **Record payment**, **Send renewal offer**, **Mark renewal signed**, **Record notice to vacate** |
+| **Leasing** | Lead pipeline from inquiry → tour → application → approval → **lease signed**. Book tours, approve applications, sign a lease on an available unit |
 | **Work board** | Make-ready and service tasks as a **kanban** (drag, or the keyboard "Move to" control) and as a **timeline** with today, target-date and projected-ready markers |
 | **Exceptions** | Only items that need a person: reason, impact and suggested action, with **Approve / Mark handled**, **Snooze** and **Reassign** |
 | **Approvals** | System-suggested changes shown as before → after, with **Accept**, **Edit** and **Reject**. Every decision goes to the activity log |
-| **Conversations** | SMS, email, voice and chat threads, plus **"What the assistant would say"**, a reply built from current data with its sources and any reasons to hold it |
+| **Conversations** | SMS, email, voice and chat threads, plus **"What Elise would say"**, a reply built from current data with its sources and any reasons to hold it. **Simulate inbound message** plays a resident, prospect or new lead |
 | **Field app** | A phone-sized checklist for on-site staff: checkboxes, photo slots (the real camera on phones), notes, complete or report a problem |
 | **Impact** | Annual impact calculator with every formula written out using the live numbers |
 | **Activity log** | Who changed what and when, and whether it was approved, automatic, rejected, manual or snoozed |
 | **Settings** | **Automation level** (1–3) with a live preview, connected systems (PMS, CRM, work orders), rules on/off, product name, theme and reset |
+
+### How it works like a PMS + EliseAI
+
+| Workflow | What happens |
+| --- | --- |
+| **Inbound message → Elise** | Elise identifies the contact (or creates a guest card for a new lead) and sorts the request: maintenance by trade (HVAC, Plumbing, Appliance …) and priority, tour, pricing, payment, renewal or move-out. Then she acts in the systems of record and replies or drafts. |
+| **Maintenance request** | Creates a work order (`WO-####`) on the resident's unit. At Level 2+ automation assigns the least-busy technician and Elise confirms the ETA. At Level 1 the assignment waits in Approvals and the reply is held. |
+| **Emergency** (leak, flood, gas, no heat …) | Urgent work order, conversation escalated, safety instructions drafted for staff to send. |
+| **Tour request** | Level 2+: Elise books the next tour slot and confirms. Level 1: she offers times for staff to confirm. |
+| **Concession, payment plan, notice, legal** | Escalated to staff with the reason; Elise drafts a holding reply. |
+| **Sign lease** (Leasing) | Lead → Lease signed; unit → Leased with the move-in date; the make-ready check now compares against that move-in. |
+| **Notice to vacate** (Residents) | Unit → On notice, available 10 days after move-out, and the standard make-ready plan is scheduled with the projection helper. |
+| **Make-ready complete** | When the last step is done (board, drawer or field app), a vacant unit turns **Ready** automatically. |
+| **Payment** | Posted to the ledger; balance updated; delinquency alerts clear. |
+| **Every change** | Logged in the Activity log with who did it (person, Elise or automation) and which system it was written to (PMS, CRM, work orders). |
 
 ### The automation level changes behavior
 
@@ -103,7 +121,9 @@ src/
     projection.ts           ← generic "ordered steps with durations → end date" helper
     workplan.ts             ← make-ready forecast built on the projection helper
     impact.ts               ← impact calculator model (inputs + formula lines)
-    assistant.ts            ← "what the assistant would say" from current data
+    assistant.ts            ← "what Elise would say" from current data
+    elise.ts                ← inbound triage + actions (work orders, tours, escalations)
+    lifecycle.ts            ← PMS workflows: make-ready plan, sign lease, notice, renewal, payment, Ready
     checklists.ts           ← field checklists per task type
     dates.ts, random.ts     ← fixed-today date helpers, seeded RNG
   store/AppStore.tsx        ← state, actions, localStorage, automation reconcile, derived hooks

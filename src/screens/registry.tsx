@@ -12,7 +12,9 @@ import { Conversations } from './Conversations';
 import { Exceptions } from './Exceptions';
 import { FieldApp } from './FieldApp';
 import { Impact } from './Impact';
+import { Leasing } from './Leasing';
 import { Overview } from './Overview';
+import { Residents } from './Residents';
 import { Settings } from './Settings';
 import { Units } from './Units';
 import { WorkBoard } from './WorkBoard';
@@ -20,6 +22,8 @@ import { WorkBoard } from './WorkBoard';
 export const SCREENS: Record<ScreenId, { path: string; icon: IconName; component: ComponentType }> = {
   overview: { path: '/overview', icon: 'home', component: Overview },
   units: { path: '/units', icon: 'building', component: Units },
+  residents: { path: '/residents', icon: 'users', component: Residents },
+  leasing: { path: '/leasing', icon: 'key', component: Leasing },
   work: { path: '/work', icon: 'wrench', component: WorkBoard },
   exceptions: { path: '/exceptions', icon: 'alert', component: Exceptions },
   approvals: { path: '/approvals', icon: 'checkCircle', component: Approvals },

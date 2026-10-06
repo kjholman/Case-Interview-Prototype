@@ -8,6 +8,8 @@
 export type ScreenId =
   | 'overview'
   | 'units'
+  | 'residents'
+  | 'leasing'
   | 'work'
   | 'exceptions'
   | 'approvals'
@@ -46,7 +48,7 @@ export const CONFIG = {
   seed: 20261006,
 
   /** Bump when the shape of persisted state changes, so stale localStorage is ignored. */
-  storageVersion: 1,
+  storageVersion: 2,
 
   /**
    * Single accent color as space-separated RGB channels (for Tailwind's alpha syntax).
@@ -68,6 +70,8 @@ export const CONFIG = {
   screens: {
     overview: { label: 'Overview', description: 'Key numbers and the most urgent items across the portfolio.', enabled: true },
     units: { label: 'Units', description: 'Every unit with its status, dates and open issues.', enabled: true },
+    residents: { label: 'Residents', description: 'Leases, balances and renewals — the resident ledger from the PMS.', enabled: true },
+    leasing: { label: 'Leasing', description: 'Every lead from first message to signed lease.', enabled: true },
     work: { label: 'Work board', description: 'Make-ready and service work by status and on a timeline.', enabled: true },
     exceptions: { label: 'Exceptions', description: 'Only the items that need a person to decide.', enabled: true },
     approvals: { label: 'Approvals', description: 'Changes the system suggests, waiting for a person to approve.', enabled: true },

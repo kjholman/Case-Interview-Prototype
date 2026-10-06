@@ -9,7 +9,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
 import { CONFIG, type IntegrationId } from '../config';
 import { applyFix, automationActor, patchRecord, routeAlert, type Route } from '../domain/automation';
+import { assistantMode, draftAssistantReply } from '../domain/assistant';
 import { addDays, nowDateTime, TODAY } from '../domain/dates';
+import { processInbound, type Inbound } from '../domain/elise';
+import { createMakeReadyPlan, giveNotice, recordPayment, renewLease, signLease, syncUnitStatuses } from '../domain/lifecycle';
 import { buildContext, evaluateRules } from '../domain/rules';
 import { createSeedAudit, createSeedData } from '../domain/seed';
 import type {
@@ -50,6 +53,8 @@ export interface AppState {
   session: Session | null;
   /** Bumped whenever automation applies changes, so the UI can announce it. */
   lastAutoRun: { seq: number; count: number };
+  /** Result of the last simulated inbound message, for the UI to announce and open. */
+  lastInbound: { seq: number; conversationId?: string; summary: string[]; sent: boolean; held: boolean };
 }
 
 const STATE_KEY = `opsconsole:v${CONFIG.storageVersion}:state`;
@@ -74,6 +79,7 @@ export function createInitialState(session: Session | null = null): AppState {
     propertyId: 'all',
     session,
     lastAutoRun: { seq: 0, count: 0 },
+    lastInbound: { seq: 0, summary: [], sent: false, held: false },
   });
 }
 
@@ -89,7 +95,7 @@ function loadState(): AppState {
     if (raw) {
       const parsed = JSON.parse(raw) as AppState;
       if (parsed.version === CONFIG.storageVersion && parsed.data?.units) {
-        return { ...parsed, settings: { ...defaultSettings(), ...parsed.settings }, session, lastAutoRun: { seq: 0, count: 0 } };
+        return { ...parsed, settings: { ...defaultSettings(), ...parsed.settings }, session, lastAutoRun: { seq: 0, count: 0 }, lastInbound: { seq: 0, summary: [], sent: false, held: false } };
       }
     }
   } catch {
@@ -100,8 +106,9 @@ function loadState(): AppState {
 
 function saveState(state: AppState) {
   try {
-    const { session, lastAutoRun, ...persisted } = state;
+    const { session, lastAutoRun, lastInbound, ...persisted } = state;
     void lastAutoRun;
+    void lastInbound;
     localStorage.setItem(STATE_KEY, JSON.stringify(persisted));
     if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     else localStorage.removeItem(SESSION_KEY);
@@ -122,7 +129,15 @@ export function computeAlerts(state: Pick<AppState, 'data' | 'settings'>): Alert
 /** Applies every fix the automation level allows. Re-evaluates between passes so overlapping fixes settle. */
 export function reconcile(state: AppState): AppState {
   const level = state.settings.automationLevel;
-  let data = state.data;
+  // System-of-record rules first: e.g. a vacant unit whose make-ready is done becomes Ready.
+  let data = syncUnitStatuses(state.data);
+  const syncEvents: AuditEvent[] = data.units
+    .filter((u, i) => u.status !== state.data.units[i]?.status)
+    .map((u) => ({
+      id: auditId(), at: nowDateTime(), actor: 'PMS', action: `Unit ${u.number} marked Ready — make-ready complete`, mode: 'automatic' as const,
+      target: { collection: 'units' as const, id: u.id, label: `Unit ${u.number}` }, propertyId: u.propertyId,
+      changes: [{ field: 'status', label: 'Status', from: 'vacant', to: 'ready' }],
+    }));
   const events: AuditEvent[] = [];
   for (let pass = 0; pass < 5; pass++) {
     const touched = new Set<string>();
@@ -141,12 +156,12 @@ export function reconcile(state: AppState): AppState {
     }
     if (!changed) break;
   }
-  if (!events.length) return state;
+  if (!events.length && !syncEvents.length) return state;
   return {
     ...state,
     data,
-    audit: [...events.reverse(), ...state.audit],
-    lastAutoRun: { seq: state.lastAutoRun.seq + 1, count: events.length },
+    audit: [...events.reverse(), ...syncEvents, ...state.audit],
+    lastAutoRun: events.length ? { seq: state.lastAutoRun.seq + 1, count: events.length } : state.lastAutoRun,
   };
 }
 
@@ -168,6 +183,12 @@ export type Action =
   | { type: 'updateRecord'; collection: CollectionName; id: string; patch: Record<string, unknown>; action: string; target: RecordRef; propertyId?: string; changes?: FieldChange[] }
   | { type: 'addMessage'; conversationId: string; message: Omit<Message, 'id' | 'at'> }
   | { type: 'updateConversation'; id: string; patch: Partial<Conversation>; action: string }
+  | { type: 'inbound'; inbound: Inbound }
+  | { type: 'signLease'; prospectId: string; unitId: string; moveIn: ISODate }
+  | { type: 'giveNotice'; residentId: string; moveOut: ISODate }
+  | { type: 'renewLease'; residentId: string }
+  | { type: 'recordPayment'; residentId: string; amount: number; method: string }
+  | { type: 'createPlan'; unitId: string }
   | { type: 'reset' };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -186,8 +207,97 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, propertyId: action.propertyId };
     case 'setProductName':
       return { ...state, settings: { ...state.settings, productName: action.name } };
+    case 'inbound': {
+      const level = state.settings.automationLevel;
+      const now = nowDateTime();
+      const res = processInbound(state.data, action.inbound, level, TODAY, now);
+      const eliseName = CONFIG.brand.assistantName;
+      const eliseEvents: AuditEvent[] = res.actions.map((a) => ({
+        id: auditId(), at: now, actor: eliseName, action: a.action, mode: 'automatic',
+        target: a.target, propertyId: res.data.conversations.find((c) => c.id === res.conversationId)?.propertyId,
+      }));
+      // Automation may act on what Elise created (e.g. assign the new work order at Level 2).
+      let next = reconcile({ ...state, data: res.data, audit: [...eliseEvents.reverse(), ...state.audit] });
+      // Draft the reply from the updated data; send it if this level allows.
+      const conv = next.data.conversations.find((c) => c.id === res.conversationId)!;
+      const draft = draftAssistantReply(conv, next.data, { today: TODAY, connected: next.settings.integrations });
+      const mode = assistantMode(level, conv, draft);
+      let sent = false;
+      if (mode.autoSend && draft.text) {
+        sent = true;
+        const msg: Message = { id: `m-${conv.id}-${conv.messages.length + 1}`, at: now, from: 'ai', authorName: eliseName, body: draft.text };
+        next = {
+          ...next,
+          data: patchRecord(next.data, 'conversations', conv.id, { messages: [...conv.messages, msg], status: 'waiting' }),
+          audit: [{ id: auditId(), at: now, actor: eliseName, action: `Replied by ${conv.channel.toUpperCase()}`, mode: 'automatic',
+            target: { collection: 'conversations', id: conv.id, label: `${conv.contact.name} · ${conv.subject}` }, propertyId: conv.propertyId }, ...next.audit],
+        };
+      }
+      return {
+        ...next,
+        lastInbound: {
+          seq: state.lastInbound.seq + 1, conversationId: res.conversationId, sent, held: !mode.autoSend,
+          summary: [...res.actions.map((a) => a.action), sent ? `Replied by ${conv.channel.toUpperCase()}` : `Reply drafted — ${mode.label.toLowerCase()}`],
+        },
+      };
+    }
+    case 'signLease': {
+      const p = state.data.prospects.find((x) => x.id === action.prospectId);
+      const u = state.data.units.find((x) => x.id === action.unitId);
+      if (!p || !u) return state;
+      return reconcile({
+        ...state,
+        data: signLease(state.data, p.id, u.id, action.moveIn),
+        audit: log({ action: `Signed lease: ${p.name} → Unit ${u.number}, move-in ${action.moveIn}`, mode: 'manual', propertyId: u.propertyId,
+          target: { collection: 'units', id: u.id, label: `Unit ${u.number}` },
+          changes: [{ field: 'status', label: 'Unit status', from: u.status, to: 'leased' }, { field: 'availableDate', label: 'Move-in', from: u.availableDate ?? null, to: action.moveIn }] }),
+      });
+    }
+    case 'giveNotice': {
+      const r = state.data.residents.find((x) => x.id === action.residentId);
+      if (!r) return state;
+      return reconcile({
+        ...state,
+        data: giveNotice(state.data, r.id, action.moveOut, TODAY),
+        audit: log({ action: `Recorded notice to vacate — move-out ${action.moveOut}; make-ready plan created`, mode: 'manual', propertyId: r.propertyId,
+          target: { collection: 'residents', id: r.id, label: r.name },
+          changes: [{ field: 'stage', label: 'Lease status', from: r.stage, to: 'notice_given' }] }),
+      });
+    }
+    case 'renewLease': {
+      const r = state.data.residents.find((x) => x.id === action.residentId);
+      if (!r) return state;
+      const next = renewLease(state.data, r.id);
+      const after = next.residents.find((x) => x.id === r.id)!;
+      return reconcile({
+        ...state, data: next,
+        audit: log({ action: 'Renewal signed — lease extended 12 months', mode: 'manual', propertyId: r.propertyId,
+          target: { collection: 'residents', id: r.id, label: r.name },
+          changes: [{ field: 'leaseEnd', label: 'Lease ends', from: r.leaseEnd, to: after.leaseEnd }] }),
+      });
+    }
+    case 'recordPayment': {
+      const r = state.data.residents.find((x) => x.id === action.residentId);
+      if (!r || action.amount <= 0) return state;
+      const next = recordPayment(state.data, r.id, action.amount, TODAY, action.method);
+      const after = next.residents.find((x) => x.id === r.id)!;
+      return reconcile({
+        ...state, data: next,
+        audit: log({ action: `Posted ${action.method.toLowerCase()} of $${action.amount.toLocaleString()}`, mode: 'manual', propertyId: r.propertyId,
+          target: { collection: 'residents', id: r.id, label: r.name },
+          changes: [{ field: 'balance', label: 'Balance', from: r.balance, to: after.balance }] }),
+      });
+    }
+    case 'createPlan': {
+      const u = state.data.units.find((x) => x.id === action.unitId);
+      if (!u) return state;
+      return reconcile({
+        ...state, data: createMakeReadyPlan(state.data, u.id, TODAY),
+        audit: log({ action: 'Created standard make-ready plan', mode: 'manual', propertyId: u.propertyId, target: { collection: 'units', id: u.id, label: `Unit ${u.number}` } }),
+      });
+    }
     case 'reset':
-      return { ...createInitialState(state.session), propertyId: state.propertyId, lastAutoRun: { seq: state.lastAutoRun.seq, count: 0 } };
+      return { ...createInitialState(state.session), propertyId: state.propertyId, lastAutoRun: { seq: state.lastAutoRun.seq, count: 0 }, lastInbound: state.lastInbound };
 
     case 'setLevel':
       return reconcile({
