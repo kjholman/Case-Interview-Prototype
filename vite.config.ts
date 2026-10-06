@@ -9,5 +9,7 @@ export default defineConfig({
   plugins: [react(), viteSingleFile()],
   base: './',
   build: { assetsInlineLimit: 100_000_000, cssCodeSplit: false },
+  // `npm start` serves the built file with `vite preview` (used by hosts like Render).
+  preview: { host: '0.0.0.0', allowedHosts: true },
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },
 });

@@ -31,6 +31,19 @@ Requires Node 18+.
 (about 390 KB, 115 KB gzipped). Open it straight from disk by double-clicking it, or email or share it.
 It needs no server and no network. Routing uses URL hashes (`#/units`) so it works from `file://`.
 
+### Deploy (Render or any Node host)
+
+`npm start` builds the app and serves it on `$PORT` (default 4173):
+
+| Render setting | Value |
+| --- | --- |
+| Service type | Web Service |
+| Build command | `npm install` |
+| Start command | `npm start` |
+
+Or deploy it as a **Static Site** instead: build command `npm install && npm run build`,
+publish directory `dist`.
+
 ### Reset demo data
 
 Any of these restores the original dataset and settings (you stay signed in):
