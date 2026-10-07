@@ -7,6 +7,7 @@
 
 export type ScreenId =
   | 'turns'
+  | 'moveout'
   | 'overview'
   | 'units'
   | 'residents'
@@ -78,6 +79,7 @@ export const CONFIG = {
     approvals: { label: 'Approvals', description: 'Changes Elise suggests, waiting for a person to approve.', enabled: true },
     units: { label: 'Units', description: 'Every unit with its status, dates and open issues.', enabled: true },
     field: { label: 'Field app', description: 'What technicians and porters see on their phone.', enabled: true },
+    moveout: { label: 'Move-out guide', description: 'What a resident on notice sees: the scheduled move-out checklist and room-by-room photo guide.', enabled: true },
     conversations: { label: 'Conversations', description: 'Resident, prospect and vendor messages across every channel.', enabled: true },
     impact: { label: 'Impact', description: 'What faster turns are worth per year.', enabled: true },
     activity: { label: 'Activity log', description: 'Every change, who made it, and whether it was approved or automatic.', enabled: true },

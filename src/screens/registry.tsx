@@ -13,6 +13,7 @@ import { Exceptions } from './Exceptions';
 import { FieldApp } from './FieldApp';
 import { Impact } from './Impact';
 import { Leasing } from './Leasing';
+import { MoveOut } from './MoveOut';
 import { Overview } from './Overview';
 import { Residents } from './Residents';
 import { Settings } from './Settings';
@@ -31,6 +32,7 @@ export const SCREENS: Record<ScreenId, { path: string; icon: IconName; component
   approvals: { path: '/approvals', icon: 'checkCircle', component: Approvals },
   conversations: { path: '/conversations', icon: 'message', component: Conversations },
   field: { path: '/field', icon: 'phone', component: FieldApp },
+  moveout: { path: '/move-out', icon: 'camera', component: MoveOut },
   impact: { path: '/impact', icon: 'calculator', component: Impact },
   activity: { path: '/activity', icon: 'history', component: Activity },
   settings: { path: '/settings', icon: 'settings', component: Settings },
