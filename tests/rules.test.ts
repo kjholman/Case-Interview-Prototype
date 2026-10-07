@@ -137,11 +137,11 @@ describe('seed data', () => {
     const alerts = evaluateRules(data);
     for (const p of data.properties) {
       const ids = new Set(alerts.filter((a) => a.propertyId === p.id).map((a) => a.ruleId));
-      for (const r of ['makeready-late', 'task-past-due', 'task-blocked', 'task-unassigned', 'date-mismatch', 'ready-early', 'no-make-ready-plan', 'tour-no-show', 'renewal-not-offered', 'delinquent-no-reminder', 'conversation-escalated']) {
+      for (const r of ['makeready-late', 'task-past-due', 'task-blocked', 'task-unassigned', 'date-mismatch', 'ready-early', 'no-make-ready-plan', 'tour-no-show', 'renewal-not-offered', 'delinquent-no-reminder', 'conversation-escalated', 'turn-plan-stale', 'vendor-unconfirmed']) {
         expect(ids.has(r), `${p.name} missing ${r}`).toBe(true);
       }
     }
-    expect(RULES.length).toBe(11);
+    expect(RULES.length).toBe(13);
   });
 });
 

@@ -1,19 +1,35 @@
-# Operations Console — prototype kit
+# EliseAI-style Turn Board — prototype kit
 
-A generic, realistic **property operations console** for multifamily housing, built to be adapted to a
-specific operational problem in 15–20 minutes. It ships with seeded mock data, a small rules engine,
-an automation-level policy, the core property-management and EliseAI workflows, and twelve screens
-that share one app shell.
+A working prototype of an **EliseAI-style turn board** for multifamily operators: every unit in turnover,
+step by step from move-out inspection to final walk, with the date it will really be ready, and Elise
+doing the coordination work (confirming vendors, re-planning turns when a step slips, assigning work,
+creating missing make-ready plans) according to the automation level.
 
-It does not solve one problem on purpose. It gives you a working, polished baseline: you change the
-data, the rules and the screen titles to fit the problem, and hide what you don't need.
-See **[ADAPT.md](ADAPT.md)** for the step-by-step guide and five worked examples.
+Under the board is a full property-operations kit (units, work orders, residents, leasing, conversations,
+rules engine, automation policy) so it can be re-aimed at another case. See **[ADAPT.md](ADAPT.md)**.
 
 - **No backend, no database.** All data comes from `src/domain/seed.ts`: a deterministic generator
   with a fixed "today" (**Tue, Oct 6, 2026**) and a fixed seed, so the demo looks the same every time.
 - **Simulated sign-in.** The login page accepts any email and password. Nothing is checked or sent anywhere.
   Choosing "Maintenance technician" lands on the field app.
 - **Changes persist in this browser** (localStorage). Use **Reset demo data** to start over.
+
+## The turn board
+
+| Part | What it does |
+| --- | --- |
+| **Board** (home) | One row per turning unit (on notice, vacant, pre-leased not ready, recently ready). A cell per step (Inspect, Repairs, Paint, Floors, Clean, Final walk) colored Done / In progress / Scheduled / Late / Blocked / No one assigned, with a **?** when the vendor hasn't confirmed. Status per unit: **Late, Blocked, At risk, No plan, On track, Not started, Ready**, with the reason in plain language. Days vacant, target (move-in if pre-leased), projected ready with days late or slack, next step. |
+| **Headline numbers** | Units turning, late or blocked (and pre-leased move-ins that will be missed), at risk, average turn time vs a 7-day target, vacancy cost per day. |
+| **Elise on turns** | What Elise did today: turns rescheduled, vendor visits confirmed, steps assigned, and what's waiting for approval. |
+| **Unit drawer** | Timeline of the turn, each step with **Start / Done / Unblock / Confirm vendor**, and **Reschedule** when the plan is out of date. |
+| **Rules behind it** | Make-ready will miss the date · Turn schedule out of date (auto re-plan) · Vendor visit not confirmed · Unassigned step · Blocked step · Past-due step · No make-ready plan · Ready early · PMS/CRM date mismatch. |
+| **Automation level** | Level 1: every fix waits in Approvals. Level 2: re-plans, vendor confirmations, assignments and new plans run automatically. Level 3: everything runs except high-risk changes on urgent turns. |
+
+Other screens: **Schedule** (kanban + timeline), **Exceptions**, **Approvals**, **Units**, **Field app**
+(tech completes steps with checklist and photos), **Conversations** (Elise and the inbound simulator),
+**Impact** (value of faster turns), **Activity log**, **Settings**. Overview, Residents and Leasing are
+built but hidden (`enabled: false` in `src/config.ts`). Leasing and collections rules are off by default
+(`defaultDisabledRules`); switch them on in Settings.
 
 ## Run it
 

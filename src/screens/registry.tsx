@@ -16,10 +16,12 @@ import { Leasing } from './Leasing';
 import { Overview } from './Overview';
 import { Residents } from './Residents';
 import { Settings } from './Settings';
+import { TurnBoard } from './TurnBoard';
 import { Units } from './Units';
 import { WorkBoard } from './WorkBoard';
 
 export const SCREENS: Record<ScreenId, { path: string; icon: IconName; component: ComponentType }> = {
+  turns: { path: '/turns', icon: 'columns', component: TurnBoard },
   overview: { path: '/overview', icon: 'home', component: Overview },
   units: { path: '/units', icon: 'building', component: Units },
   residents: { path: '/residents', icon: 'users', component: Residents },

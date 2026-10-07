@@ -17,6 +17,7 @@ import { CONFIG } from '../config';
 import { addDays, daysBetween, maxDate } from './dates';
 import { TOUR_SLOTS, triage } from './elise';
 import { createRng, type Rng } from './random';
+import { forecastPlan, unitPlan } from './workplan';
 import type {
   AuditEvent, Conversation, ConversationTopic, Channel, Dataset, ISODate, LedgerEntry, Message, Priority,
   Property, Prospect, ProspectStage, Resident, StaffMember, Task, TaskType, Unit, UnitStatus, Vendor,
@@ -193,7 +194,8 @@ export function createSeedData(seed: number = CONFIG.seed, today: ISODate = CONF
     };
 
     /** Builds a make-ready plan; returns tasks. `opts` steer planted scenarios. */
-    const buildPlan = (u: Unit, opts: { slipAt?: TaskType; blockAt?: TaskType; unassign?: TaskType[]; allDone?: boolean } = {}) => {
+    /** `stale`: a slipped step does NOT push later steps — the plan is out of date (Elise re-plans it). */
+    const buildPlan = (u: Unit, opts: { slipAt?: TaskType; blockAt?: TaskType; unassign?: TaskType[]; allDone?: boolean; stale?: boolean } = {}) => {
       const plan: Task[] = [];
       let cursor = addDays(u.moveOutDate!, 1);
       let slipped = false;
@@ -230,13 +232,13 @@ export function createSeedData(seed: number = CONFIG.seed, today: ISODate = CONF
           // Slipped: started on time but still not finished → past due.
           task.status = 'in_progress';
           slipped = true;
-          cursor = d(1);
+          cursor = opts.stale ? addDays(end, 1) : d(1);
         } else {
-          if (slipped) {
+          if (slipped && !opts.stale) {
             task.start = maxDate(cursor, d(1));
             task.due = addDays(task.start, dur - 1);
           }
-          task.status = task.start <= today && today <= task.due ? 'in_progress' : 'todo';
+          task.status = !slipped && task.start <= today && today <= task.due ? 'in_progress' : 'todo';
           cursor = addDays(task.due, 1);
         }
         const unassign = opts.unassign?.includes(step.type) || (task.status !== 'done' && rng.chance(0.02));
@@ -256,7 +258,7 @@ export function createSeedData(seed: number = CONFIG.seed, today: ISODate = CONF
         tasks.push(...buildPlan(u, { blockAt: 'paint' }));
       } else if (scenario === 'vacant_slipped') {
         Object.assign(u, { status: 'vacant', moveOutDate: d(-7), availableDate: d(1) });
-        tasks.push(...buildPlan(u, { slipAt: 'repair' }));
+        tasks.push(...buildPlan(u, { slipAt: 'repair', stale: true }));
       } else if (scenario === 'ready_early') {
         Object.assign(u, { status: 'ready', moveOutDate: d(-12), availableDate: d(7) });
         tasks.push(...buildPlan(u, { allDone: true }));
@@ -396,6 +398,26 @@ export function createSeedData(seed: number = CONFIG.seed, today: ISODate = CONF
       t.category = triage(t.title, 'resident').category ?? 'General';
       t.source = linked.has(t.id) ? 'elise' : rng2.weighted([['elise', 55], ['portal', 30], ['staff', 15]]);
     }
+  }
+  // One blocked-but-still-on-time turn per property: a step waits on a part, with slack to absorb it.
+  for (const p of properties) {
+    for (const u of units.filter((x) => x.propertyId === p.id && (x.status === 'vacant' || x.status === 'notice') && x.availableDate)) {
+      const plan = unitPlan(tasks, u.id);
+      const step = plan.find((t) => t.status === 'todo' && t.type === 'repair' && t.start > today);
+      if (!step || forecastPlan(plan, today).readyDate > addDays(u.availableDate!, -3)) continue;
+      Object.assign(step, { status: 'blocked', blockedReason: 'Waiting on replacement countertop (ETA confirmed)', earliestStart: step.start });
+      break;
+    }
+  }
+
+  // Vendor visits: started ones are confirmed; about half of upcoming ones still need confirming.
+  for (const t of tasks) {
+    if (!t.vendorId || t.status === 'done') continue;
+    t.vendorConfirmed = t.start <= today || t.status !== 'todo' ? true : rng2.chance(0.5);
+  }
+  for (const p of properties) {
+    const upcoming = tasks.find((t) => t.propertyId === p.id && t.vendorId && t.status === 'todo' && t.start > today && t.start <= addDays(today, 3));
+    if (upcoming) upcoming.vendorConfirmed = false;
   }
   for (const p of prospects) {
     if (p.tourDate) {

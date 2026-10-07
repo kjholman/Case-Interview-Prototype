@@ -14,7 +14,7 @@
 import { addDays, maxDate } from './dates';
 import { projectSchedule } from './projection';
 import type { Dataset, ISODate, LedgerEntry, Task, TaskType } from './types';
-import { unitPlan } from './workplan';
+import { forecastPlan, unitPlan } from './workplan';
 
 /** Standard make-ready template used when a plan is created in the app. */
 export const STANDARD_MAKE_READY: { type: TaskType; title: string; days: number; who: 'tech' | 'vendor' }[] = [
@@ -127,4 +127,33 @@ export function syncUnitStatuses(data: Dataset): Dataset {
     return u;
   });
   return changed ? { ...data, units } : data;
+}
+
+/**
+ * Re-plans a turn after a slip: every step that hasn't started moves to the date the projection
+ * says it can actually happen (after late or blocked work ahead of it). Started work is untouched.
+ */
+export function reschedulePlan(data: Dataset, unitId: string, today: ISODate): Dataset {
+  const plan = unitPlan(data.tasks, unitId);
+  const f = forecastPlan(plan, today);
+  const moved = new Map<string, { start: ISODate; due: ISODate }>();
+  for (const s of f.projection.steps) {
+    const t = plan.find((x) => x.id === s.id);
+    if (t && t.status === 'todo' && (t.start !== s.start || t.due !== s.end)) moved.set(t.id, { start: s.start, due: s.end });
+  }
+  if (!moved.size) return data;
+  // A vendor visit that moves needs re-confirming.
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => (moved.has(t.id) ? { ...t, ...moved.get(t.id)!, ...(t.vendorId ? { vendorConfirmed: false } : {}) } : t)),
+  };
+}
+
+/** Steps of a plan whose planned dates no longer match what can actually happen. */
+export function staleSteps(plan: Task[], today: ISODate) {
+  const f = forecastPlan(plan, today);
+  return f.projection.steps
+    .map((s) => ({ s, t: plan.find((x) => x.id === s.id)! }))
+    .filter(({ s, t }) => t.status === 'todo' && (s.start !== t.start || s.end !== t.due))
+    .map(({ s, t }) => ({ task: t, start: s.start, end: s.end }));
 }

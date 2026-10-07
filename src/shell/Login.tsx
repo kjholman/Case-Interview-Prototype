@@ -39,8 +39,8 @@ export function Login() {
         <BrandMark className="relative text-3xl" />
         <div className="relative max-w-md">
           <p className="text-sm font-medium uppercase tracking-widest text-[#AFC1F6]">{state.settings.productName}</p>
-          <h2 className="mt-3 text-4xl font-semibold leading-tight tracking-tight">Every unit, task and conversation in one place.</h2>
-          <p className="mt-4 text-base text-slate-300">Leasing, maintenance, renewals and resident communication, with {CONFIG.brand.assistantName} handling the routine work and your team handling the exceptions.</p>
+          <h2 className="mt-3 text-4xl font-semibold leading-tight tracking-tight">Every turn on schedule. Every unit ready on time.</h2>
+          <p className="mt-4 text-base text-slate-300">One board for every make-ready, from move-out to keys. {CONFIG.brand.assistantName} confirms vendors, re-plans turns when a step slips, and flags the move-ins at risk, so your team only handles the exceptions.</p>
         </div>
         <p className="relative text-xs text-slate-500">{CONFIG.brand.disclaimer}</p>
       </section>

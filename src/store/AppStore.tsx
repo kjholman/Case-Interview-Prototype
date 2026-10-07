@@ -63,7 +63,7 @@ const SESSION_KEY = 'opsconsole:session';
 const defaultSettings = (): Settings => ({
   automationLevel: 1,
   integrations: { pms: true, crm: true, workOrders: true },
-  disabledRules: [],
+  disabledRules: [...CONFIG.defaultDisabledRules],
   productName: CONFIG.productName,
 });
 

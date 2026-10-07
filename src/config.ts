@@ -6,6 +6,7 @@
  */
 
 export type ScreenId =
+  | 'turns'
   | 'overview'
   | 'units'
   | 'residents'
@@ -38,7 +39,7 @@ export const CONFIG = {
     disclaimer: 'Concept prototype for an interview demo — not an official EliseAI product. All data is fictional.',
   },
   /** Product (module) name under the brand (can also be changed at runtime in Settings). */
-  productName: 'Operations Console',
+  productName: 'Turn Board',
   /** Fictional operator that owns the portfolio. */
   organizationName: 'Northgate Residential',
 
@@ -48,7 +49,7 @@ export const CONFIG = {
   seed: 20261006,
 
   /** Bump when the shape of persisted state changes, so stale localStorage is ignored. */
-  storageVersion: 2,
+  storageVersion: 3,
 
   /**
    * Single accent color as space-separated RGB channels (for Tailwind's alpha syntax).
@@ -64,22 +65,27 @@ export const CONFIG = {
   },
 
   /** Default landing screen after sign-in. */
-  homeScreen: 'overview' as ScreenId,
+  homeScreen: 'turns' as ScreenId,
+
+  /** Rules switched off by default (not part of the turn story). Re-enable them in Settings. */
+  defaultDisabledRules: ['renewal-not-offered', 'delinquent-no-reminder', 'tour-no-show'],
 
   /** Navigation order = object key order. Rename, re-describe, or disable screens here. */
   screens: {
-    overview: { label: 'Overview', description: 'Key numbers and the most urgent items across the portfolio.', enabled: true },
+    turns: { label: 'Turn board', description: 'Every unit in turnover, step by step, with the date it will really be ready.', enabled: true },
+    work: { label: 'Schedule', description: 'Make-ready and service work by status and on a timeline.', enabled: true },
+    exceptions: { label: 'Exceptions', description: 'Only the turns and work orders that need a person to decide.', enabled: true },
+    approvals: { label: 'Approvals', description: 'Changes Elise suggests, waiting for a person to approve.', enabled: true },
     units: { label: 'Units', description: 'Every unit with its status, dates and open issues.', enabled: true },
-    residents: { label: 'Residents', description: 'Leases, balances and renewals — the resident ledger from the PMS.', enabled: true },
-    leasing: { label: 'Leasing', description: 'Every lead from first message to signed lease.', enabled: true },
-    work: { label: 'Work board', description: 'Make-ready and service work by status and on a timeline.', enabled: true },
-    exceptions: { label: 'Exceptions', description: 'Only the items that need a person to decide.', enabled: true },
-    approvals: { label: 'Approvals', description: 'Changes the system suggests, waiting for a person to approve.', enabled: true },
-    conversations: { label: 'Conversations', description: 'Prospect and resident messages across every channel.', enabled: true },
-    field: { label: 'Field app', description: 'What on-site staff see on their phone.', enabled: true },
-    impact: { label: 'Impact', description: 'Estimate the annual value of an improvement.', enabled: true },
+    field: { label: 'Field app', description: 'What technicians and porters see on their phone.', enabled: true },
+    conversations: { label: 'Conversations', description: 'Resident, prospect and vendor messages across every channel.', enabled: true },
+    impact: { label: 'Impact', description: 'What faster turns are worth per year.', enabled: true },
     activity: { label: 'Activity log', description: 'Every change, who made it, and whether it was approved or automatic.', enabled: true },
     settings: { label: 'Settings', description: 'Automation level, connected systems and demo data.', enabled: true },
+    // Not part of the turn-board story; switch on to bring them back.
+    overview: { label: 'Overview', description: 'Key numbers and the most urgent items across the portfolio.', enabled: false },
+    residents: { label: 'Residents', description: 'Leases, balances and renewals — the resident ledger from the PMS.', enabled: false },
+    leasing: { label: 'Leasing', description: 'Every lead from first message to signed lease.', enabled: false },
   } satisfies Record<ScreenId, ScreenConfig>,
 
   /** Systems the console pretends to be connected to. Labels are generic on purpose. */

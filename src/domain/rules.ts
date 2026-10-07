@@ -15,7 +15,7 @@ import { CONFIG, type IntegrationId } from '../config';
 import { addDays, daysBetween, dueLabel, formatDate } from './dates';
 import { formatCurrency } from './impact';
 import type { Alert, Dataset, ISODate, Prospect, Resident, Severity, StaffMember, Task, Unit } from './types';
-import { STANDARD_MAKE_READY } from './lifecycle';
+import { STANDARD_MAKE_READY, staleSteps } from './lifecycle';
 import { forecastPlan, unitPlan } from './workplan';
 
 /* ── Context and indexes ──────────────────────────────────────────────────── */
@@ -288,6 +288,69 @@ export const RULES: Rule[] = [
                 field: 'makeReadyPlan', label: 'Make-ready plan', from: 'None', readOnly: true,
                 to: `${STANDARD_MAKE_READY.length} steps, ${formatDate(start)}–${formatDate(addDays(start, days - 1))}`,
               }],
+            },
+          };
+        });
+    },
+  },
+  {
+    id: 'turn-plan-stale',
+    label: 'Turn schedule out of date',
+    description: 'A step slipped or is blocked, so later steps can no longer happen on their planned dates.',
+    requires: ['workOrders'],
+    evaluate(ctx) {
+      const out: AlertDraft[] = [];
+      for (const u of ctx.data.units) {
+        const plan = unitPlan(ctx.tasksByUnit.get(u.id) ?? [], u.id);
+        if (!plan.length) continue;
+        const stale = staleSteps(plan, ctx.today);
+        if (!stale.length) continue;
+        const f = forecastPlan(plan, ctx.today);
+        const cause = plan.find((t) => t.status === 'blocked') ?? plan.find((t) => t.status !== 'done' && t.due < ctx.today);
+        const ref = { collection: 'units' as const, id: u.id, label: unitLabel(u) };
+        out.push({
+          propertyId: u.propertyId, severity: 'medium', record: ref,
+          title: `${unitLabel(u)} turn schedule needs updating`,
+          reason: `${cause ? `${cause.title} ${cause.status === 'blocked' ? 'is blocked' : 'ran late'}, so ` : ''}${stale.length} later step${stale.length === 1 ? ' is' : 's are'} scheduled earlier than ${stale.length === 1 ? 'it' : 'they'} can happen.`,
+          impact: 'Crews and vendors show up to a unit that isn\'t ready for them; the board shows a date nobody can hit.',
+          suggestedAction: `Move the remaining steps; projected ready ${formatDate(f.readyDate)}.`,
+          fix: {
+            label: `Reschedule ${stale.length} step${stale.length === 1 ? '' : 's'} and notify crews`,
+            risk: 'low',
+            target: ref,
+            action: 'reschedulePlan',
+            changes: stale.map((s) => ({
+              field: s.task.id, label: s.task.title, readOnly: true,
+              from: `${formatDate(s.task.start)}–${formatDate(s.task.due)}`, to: `${formatDate(s.start)}–${formatDate(s.end)}`,
+            })),
+          },
+        });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'vendor-unconfirmed',
+    label: 'Vendor visit not confirmed',
+    description: 'A vendor is scheduled in the next 3 days and has not confirmed.',
+    requires: ['workOrders'],
+    evaluate(ctx) {
+      return ctx.data.tasks
+        .filter((t) => t.status === 'todo' && t.vendorId && t.vendorConfirmed === false && daysBetween(ctx.today, t.start) <= 3)
+        .map((t) => {
+          const vendor = ctx.data.vendors.find((v) => v.id === t.vendorId)?.name ?? 'Vendor';
+          const ref = { collection: 'tasks' as const, id: t.id, label: taskLabel(t, ctx) };
+          return {
+            propertyId: t.propertyId, severity: (daysBetween(ctx.today, t.start) <= 1 ? 'high' : 'medium') as Severity, record: ref,
+            title: `${vendor} hasn't confirmed ${taskLabel(t, ctx)}`,
+            reason: `Scheduled ${formatDate(t.start)}${t.durationDays > 1 ? `–${formatDate(t.due)}` : ''}; no confirmation yet.`,
+            impact: 'An unconfirmed vendor is the most common reason a turn slips a day.',
+            suggestedAction: `Text ${vendor} to confirm, and find a backup if they can't make it.`,
+            fix: {
+              label: `Text ${vendor} to confirm ${formatDate(t.start)}`,
+              risk: 'low',
+              target: ref,
+              changes: [{ field: 'vendorConfirmed', label: 'Vendor confirmed', from: false, to: true, readOnly: true }],
             },
           };
         });

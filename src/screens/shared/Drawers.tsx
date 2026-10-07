@@ -53,6 +53,7 @@ export function UnitDrawer({ unitId, onClose }: { unitId?: string; onClose: () =
   const service = state.data.tasks.filter((t) => t.unitId === unit.id && t.type === 'service' && t.status !== 'done');
   const relatedIds = new Set([unit.id, resident?.id, incoming?.id, ...plan.map((t) => t.id), ...service.map((t) => t.id)]);
   const alerts = all.filter((a) => relatedIds.has(a.record.id));
+  const staleAlert = all.find((a) => a.id === `turn-plan-stale:${unit.id}` && a.fix);
   const history = state.audit.filter((e) => e.target && relatedIds.has(e.target.id)).slice(0, 6);
   const mismatch = unit.crmAvailableDate && unit.availableDate && unit.crmAvailableDate !== unit.availableDate;
   const late = forecast && unit.availableDate && forecast.readyDate > unit.availableDate && unit.status !== 'ready' && unit.status !== 'occupied';
@@ -125,6 +126,41 @@ export function UnitDrawer({ unitId, onClose }: { unitId?: string; onClose: () =
               markers: unit.availableDate ? [{ date: addDays(unit.availableDate, -1), label: `Available ${formatDate(unit.availableDate)}`, tone: 'target' as const }] : [],
             }))}
           />
+          {staleAlert && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-sm dark:border-amber-900 dark:bg-amber-950/50">
+              <Icon name="clock" className="h-4 w-4 shrink-0 text-amber-600" />
+              <span className="flex-1 text-slate-800 dark:text-slate-200">{staleAlert.reason}</span>
+              <button type="button" className="btn-primary btn-sm" onClick={() => { dispatch({ type: 'applyFix', alert: staleAlert }); toast('Turn rescheduled — crews and vendors notified'); }}>
+                <Icon name="sparkles" className="h-3.5 w-3.5" />{staleAlert.fix?.label}
+              </button>
+            </div>
+          )}
+          <ul className="mt-3 divide-y divide-slate-100 rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+            {plan.map((t) => {
+              const confirmAlert = all.find((a) => a.id === `vendor-unconfirmed:${t.id}`);
+              const setStatus = (status: TaskStatus, label: string, extra: Record<string, unknown> = {}) => {
+                dispatch({ type: 'updateRecord', collection: 'tasks', id: t.id, patch: { status, ...extra }, action: label,
+                  target: { collection: 'tasks', id: t.id, label: `${t.title} · Unit ${unit.number}` }, propertyId: t.propertyId,
+                  changes: [{ field: 'status', label: 'Status', from: t.status, to: status }] });
+                toast(`${t.title}: ${label.toLowerCase()}`);
+              };
+              return (
+                <li key={t.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{t.title}
+                      {t.vendorId && t.status === 'todo' && <span className={t.vendorConfirmed === false ? 'ml-1.5 text-[11px] font-medium text-accent-strong' : 'ml-1.5 text-[11px] text-emerald-700 dark:text-emerald-400'}>{t.vendorConfirmed === false ? 'Not confirmed' : 'Confirmed'}</span>}
+                    </p>
+                    <p className="text-xs muted">{who(t) ?? 'Unassigned'} · {t.status === 'done' ? `done ${formatDate(t.completedDate)}` : `${formatDate(t.start)}–${formatDate(t.due)}`}{t.blockedReason && t.status === 'blocked' ? ` · ${t.blockedReason}` : ''}</p>
+                  </div>
+                  <StatusPill {...TASK_STATUS[t.status]} />
+                  {confirmAlert && <button type="button" className="btn-secondary btn-sm" onClick={() => { dispatch({ type: 'applyFix', alert: confirmAlert }); toast(`${CONFIG.brand.assistantName} texted the vendor — visit confirmed`); }}>Confirm vendor</button>}
+                  {t.status === 'todo' && <button type="button" className="btn-secondary btn-sm" onClick={() => setStatus('in_progress', 'Started')}>Start</button>}
+                  {t.status === 'blocked' && <button type="button" className="btn-secondary btn-sm" onClick={() => setStatus('in_progress', 'Unblocked', { blockedReason: undefined })}>Unblock</button>}
+                  {t.status !== 'done' && <button type="button" className="btn-secondary btn-sm" onClick={() => setStatus('done', 'Completed', { completedDate: TODAY, blockedReason: undefined })}><Icon name="check" className="h-3.5 w-3.5" />Done</button>}
+                </li>
+              );
+            })}
+          </ul>
         </Section>
       )}
 

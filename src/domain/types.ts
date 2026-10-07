@@ -147,6 +147,8 @@ export interface Task {
   category?: string;
   /** How the work order was created. */
   source?: 'elise' | 'staff' | 'portal' | 'make_ready';
+  /** Vendor steps: has the vendor confirmed the scheduled visit? */
+  vendorConfirmed?: boolean;
 }
 
 /* ── Communication ────────────────────────────────────────────────────────── */
@@ -214,7 +216,7 @@ export interface Fix {
   target: RecordRef;
   changes: FieldChange[];
   /** Fixes that do more than set fields. Handled in automation.applyFix. */
-  action?: 'createMakeReadyPlan';
+  action?: 'createMakeReadyPlan' | 'reschedulePlan';
 }
 
 /** Alert / Exception produced by a rule. Ids are stable: `${ruleId}:${recordId}`. */
